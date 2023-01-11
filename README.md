@@ -1,8 +1,9 @@
 <br/>
 
-<img src="images/logo.png"/>
+<img src="images/logo.png" style="margin-bottom: 30px"/>
 
 GradeCulator is a final grade calculator for courses where the final grade
+
 is calculated as a weighed average of a set of the grades for the Ladok modules
 of the course. The calculator can for example be added to a page in
 Studium/Canvas to makes it easy for students to understand how each of the Ladok
