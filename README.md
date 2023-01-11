@@ -92,12 +92,12 @@ address bar you will see something similar to this:
 
 ``` shell
 https://uppsala.instructure.com/courses/55113/files/folder/GradeCulator?preview=2836960
-                                        -----                                         -------
-                                          ^                                              ^
-                                          |                                              |               
-                                          |                                              |
+                                        -----                                   -------
+                                          ^                                        ^
+                                          |                                        |               
+                                          |                                        |
                                          
-                                      Course ID                                       File ID
+                                      Course ID                                 File ID
 ```
 
 Use the `Course ID` and `File ID` to create an `<iframe>`.
