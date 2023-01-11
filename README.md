@@ -16,7 +16,7 @@ calculated as a weighted average of all the Ladok modules with grade scale Fail,
 3, 4, 5 with the number of credits for each module as weight. 
 
 <p align="center">
-<img src="images/ospp-example.png" width="400px"/>
+<img src="images/ospp-example.png" width="700px"/>
 </p>
 
 The Assignments (part 1) module consists of three graded assignmetns and the grade
@@ -33,7 +33,7 @@ If one or more of the graded artifacts has the grade **Fail**, no final grade ca
 calculated shown in the below example. 
 
 <p align="center"r>
-<img src="images/ospp-no-grade-example.png" width="400">
+<img src="images/ospp-no-grade-example.png" width="700">
 </p>
 
 # Demo
