@@ -39,9 +39,9 @@ calculated shown in the below example.
 
 # Demo
 
-Check out this [demo](demo/gradeculator.html) of the GradeCulator confiugred for
-the OSPP (1DT096) course.  
+Check out this [demo][demo] of the GradeCulator confiugred for the OSPP (1DT096) course.  
 
+[demo]: https://htmlpreview.github.io/?https://github.com/kamar535/gradeculator/blob/master/demo/gradeculator.html
 # Implemented in Elm
 
 The final grade calculator is implemented in [Elm][elm], a
