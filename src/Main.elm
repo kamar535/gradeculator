@@ -511,23 +511,36 @@ cell alignment content =
     el [ alignment, centerY, paddingXY 20 10 ] content
 
 
-sumCell : List (Attribute msg) -> Element msg -> Element msg
-sumCell style content =
+tableCell : List (Attribute msg) -> Element msg -> Element msg
+tableCell attributes child =
     el
-        (style
-            ++ [ Border.widthEach { top = 2, bottom = 0, left = 0, right = 0 }, paddingXY 20 10 ]
-        )
-        content
+        [ height fill
+        , paddingXY 20 6
+        ]
+    <|
+        el (attributes ++ [ alignTop ]) child
+
+
+sumCell : List (Attribute msg) -> Element msg -> Element msg
+sumCell attributes child =
+    el
+        [ height fill
+        , Border.widthEach { top = 2, bottom = 0, left = 0, right = 0 }
+        , paddingXY 0 10
+        , centerX
+        ]
+    <|
+        el (attributes ++ [ alignBottom ]) child
 
 
 codeColumn : Row -> Element msg
 codeColumn row =
     case row of
         Single record ->
-            .code record |> text |> cell Font.alignLeft
+            .code record |> text |> tableCell [ centerX ]
 
         Header record ->
-            .code record |> text |> cell Font.alignLeft
+            .code record |> text |> tableCell [ centerX ]
 
         Part _ ->
             none
@@ -540,10 +553,10 @@ weightColumn : Array.Array Module -> Row -> Element msg
 weightColumn modules row =
     case row of
         Single record ->
-            .credits record |> String.fromInt |> text |> cell Font.center
+            .credits record |> String.fromInt |> text |> tableCell [ centerX ]
 
         Header record ->
-            .credits record |> String.fromInt |> text |> cell Font.center
+            .credits record |> String.fromInt |> text |> tableCell [ centerX ]
 
         Part _ ->
             none
@@ -553,7 +566,7 @@ weightColumn modules row =
                 totalWeight =
                     Array.foldl (\m sumW -> m.credits + sumW) 0 modules
             in
-            sumCell [ Font.center ] <| text <| String.fromInt <| totalWeight
+            sumCell [ centerX ] <| text <| String.fromInt <| totalWeight
 
 
 type alias PaddingEach =
@@ -573,13 +586,17 @@ nameColumn : Row -> Element msg
 nameColumn r =
     case r of
         Single record ->
-            .name record |> text |> cell Font.alignLeft
+            .name record |> text |> tableCell []
 
         Header record ->
-            paragraph [ Font.alignLeft, paddingXY 20 10 ] [ .name record |> text ]
+            paragraph [ Font.alignLeft ] [ .name record |> text ] |> tableCell []
 
         Part record ->
-            row [ paddingEach { zeroPadding | left = 20, top = 6 } ] [ paragraph [ Font.alignLeft, paddingXY 20 6 ] [ .name record |> text ] ]
+            row []
+                [ el [ width (px 20) ] none
+                , paragraph [ Font.alignLeft ] [ .name record |> text ]
+                ]
+                |> tableCell []
 
         Sum ->
             sumCell [] none
@@ -589,26 +606,26 @@ gradeColumn : Array.Array Module -> Row -> Element Msg
 gradeColumn modules r =
     case r of
         Single mod ->
-            cell centerX <| gradeButtons (ModuleIndex mod.moduleIndex) modules
+            tableCell [ centerX ] <| gradeButtons (ModuleIndex mod.moduleIndex) modules
 
         Header h ->
-            cell Font.center <| viewAverageModuleGrade h.moduleIndex modules
+            tableCell [ centerX ] <| viewAverageModuleGrade h.moduleIndex modules
 
         Part part ->
-            cell centerX <| gradeButtons (ModuleAndPartIndex part.moduleIndex part.partIndex) modules
+            tableCell [ centerX ] <| gradeButtons (ModuleAndPartIndex part.moduleIndex part.partIndex) modules
 
         Sum ->
-            sumCell [ Font.bold, Font.alignRight ] <| text "Sum"
+            sumCell [ Font.bold, alignRight ] <| text "Sum"
 
 
 weightedColumn : Array.Array Module -> Row -> Element Msg
 weightedColumn modules w =
     case w of
         Single s ->
-            cell Font.center <| viewModuleAverageWeightedGrade s.moduleIndex modules
+            tableCell [ centerX ] <| viewModuleAverageWeightedGrade s.moduleIndex modules
 
         Header h ->
-            cell Font.center <| viewModuleAverageWeightedGrade h.moduleIndex modules
+            tableCell [ centerX ] <| viewModuleAverageWeightedGrade h.moduleIndex modules
 
         Part _ ->
             none
@@ -620,38 +637,48 @@ weightedColumn modules w =
                         |> Maybe.map (\( _, s ) -> String.fromInt s)
                         |> Maybe.withDefault "Incomplete"
             in
-            sumCell [ Font.center ] <| text sum
+            sumCell [ centerX ] <| text sum
 
 
 modulesTable : Array.Array Module -> Element Msg
 modulesTable modules =
     let
-        header alignment txt =
-            el [ alignment, Font.bold, Border.widthEach { top = 0, bottom = 2, left = 0, right = 0 }, paddingXY 20 6 ] <| paragraph [] [ text txt ]
+        headerCell : List (Attribute msg) -> Element msg -> Element msg
+        headerCell attributes child =
+            -- Same row height for all table columns using elm-ui
+            -- https://stackoverflow.com/questions/69364693/same-row-height-for-all-table-columns-using-elm-ui
+            el
+                [ height fill
+                , Font.bold
+                , Border.widthEach { top = 0, bottom = 2, left = 0, right = 0 }
+                , paddingXY 20 6
+                ]
+            <|
+                el (attributes ++ [ alignBottom ]) child
 
-        header2 alignment content =
-            el [ alignment, height (px 50), Font.bold, Border.widthEach { top = 0, bottom = 2, left = 0, right = 0 }, paddingXY 20 6 ] <| content
+        centeredStrings strings =
+            List.intersperse (html <| br [] []) (List.map text strings) |> paragraph []
     in
     table []
-        { data = modulesToRows modules -- osppModules
+        { data = modulesToRows modules
         , columns =
-            [ { header = header2 Font.alignLeft <| paragraph [] [ text "", html <| br [] [], text "Code" ]
+            [ { header = headerCell [ centerX ] <| text "Code"
               , width = shrink
               , view = codeColumn
               }
-            , { header = header2 Font.alignLeft <| paragraph [] [ text "", html <| br [] [], text "Ladok module" ]
+            , { header = headerCell [] <| text "Ladok module"
               , width = fill
               , view = nameColumn
               }
-            , { header = header2 Font.center <| paragraph [] [ text "", html <| br [] [], text "Grade" ]
+            , { header = headerCell [ centerX ] <| text "Grade"
               , width = shrink
               , view = gradeColumn modules
               }
-            , { header = header2 Font.center <| paragraph [] [ text "Weight", html <| br [] [], text "(credits)" ]
+            , { header = headerCell [ Font.center ] <| centeredStrings [ "Weight", "(credits)" ]
               , width = shrink
               , view = weightColumn modules
               }
-            , { header = header2 Font.center <| paragraph [] [ text "Weighted", html <| br [] [], text "grade" ]
+            , { header = headerCell [ Font.center ] <| centeredStrings [ "Weighted", "grade" ]
               , width = shrink
               , view = weightedColumn modules
               }
