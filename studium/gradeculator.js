@@ -11341,21 +11341,27 @@ var $mdgriffith$elm_ui$Element$layoutWith = F3(
 	});
 var $mdgriffith$elm_ui$Element$layout = $mdgriffith$elm_ui$Element$layoutWith(
 	{options: _List_Nil});
+var $mdgriffith$elm_ui$Internal$Model$AlignY = function (a) {
+	return {$: 'AlignY', a: a};
+};
+var $mdgriffith$elm_ui$Internal$Model$Bottom = {$: 'Bottom'};
+var $mdgriffith$elm_ui$Element$alignBottom = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Bottom);
 var $mdgriffith$elm_ui$Internal$Model$Class = F2(
 	function (a, b) {
 		return {$: 'Class', a: a, b: b};
 	});
-var $mdgriffith$elm_ui$Internal$Flag$fontAlignment = $mdgriffith$elm_ui$Internal$Flag$flag(12);
-var $mdgriffith$elm_ui$Element$Font$alignLeft = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontAlignment, $mdgriffith$elm_ui$Internal$Style$classes.textLeft);
 var $mdgriffith$elm_ui$Internal$Flag$fontWeight = $mdgriffith$elm_ui$Internal$Flag$flag(13);
 var $mdgriffith$elm_ui$Element$Font$bold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.bold);
 var $elm$html$Html$br = _VirtualDom_node('br');
+var $mdgriffith$elm_ui$Internal$Flag$fontAlignment = $mdgriffith$elm_ui$Internal$Flag$flag(12);
 var $mdgriffith$elm_ui$Element$Font$center = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontAlignment, $mdgriffith$elm_ui$Internal$Style$classes.textCenter);
-var $mdgriffith$elm_ui$Internal$Model$AlignY = function (a) {
-	return {$: 'AlignY', a: a};
+var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
+	return {$: 'AlignX', a: a};
 };
-var $mdgriffith$elm_ui$Internal$Model$CenterY = {$: 'CenterY'};
-var $mdgriffith$elm_ui$Element$centerY = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$CenterY);
+var $mdgriffith$elm_ui$Internal$Model$CenterX = {$: 'CenterX'};
+var $mdgriffith$elm_ui$Element$centerX = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$CenterX);
+var $mdgriffith$elm_ui$Internal$Model$Empty = {$: 'Empty'};
+var $mdgriffith$elm_ui$Element$none = $mdgriffith$elm_ui$Internal$Model$Empty;
 var $mdgriffith$elm_ui$Element$el = F2(
 	function (attrs, child) {
 		return A4(
@@ -11373,6 +11379,10 @@ var $mdgriffith$elm_ui$Element$el = F2(
 				_List_fromArray(
 					[child])));
 	});
+var $mdgriffith$elm_ui$Internal$Model$Fill = function (a) {
+	return {$: 'Fill', a: a};
+};
+var $mdgriffith$elm_ui$Element$fill = $mdgriffith$elm_ui$Internal$Model$Fill(1);
 var $mdgriffith$elm_ui$Internal$Model$PaddingStyle = F5(
 	function (a, b, c, d, e) {
 		return {$: 'PaddingStyle', a: a, b: b, c: c, d: d, e: e};
@@ -11407,20 +11417,6 @@ var $mdgriffith$elm_ui$Element$paddingXY = F2(
 					xFloat));
 		}
 	});
-var $author$project$Main$cell = F2(
-	function (alignment, content) {
-		return A2(
-			$mdgriffith$elm_ui$Element$el,
-			_List_fromArray(
-				[
-					alignment,
-					$mdgriffith$elm_ui$Element$centerY,
-					A2($mdgriffith$elm_ui$Element$paddingXY, 20, 10)
-				]),
-			content);
-	});
-var $mdgriffith$elm_ui$Internal$Model$Empty = {$: 'Empty'};
-var $mdgriffith$elm_ui$Element$none = $mdgriffith$elm_ui$Internal$Model$Empty;
 var $mdgriffith$elm_ui$Internal$Model$BorderWidth = F5(
 	function (a, b, c, d, e) {
 		return {$: 'BorderWidth', a: a, b: b, c: c, d: d, e: e};
@@ -11467,18 +11463,43 @@ var $mdgriffith$elm_ui$Element$Border$widthEach = function (_v0) {
 			left));
 };
 var $author$project$Main$sumCell = F2(
-	function (style, content) {
+	function (attributes, child) {
 		return A2(
 			$mdgriffith$elm_ui$Element$el,
-			_Utils_ap(
-				style,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$Border$widthEach(
-						{bottom: 0, left: 0, right: 0, top: 2}),
-						A2($mdgriffith$elm_ui$Element$paddingXY, 20, 10)
-					])),
-			content);
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
+					$mdgriffith$elm_ui$Element$Border$widthEach(
+					{bottom: 0, left: 0, right: 0, top: 2}),
+					A2($mdgriffith$elm_ui$Element$paddingXY, 0, 10),
+					$mdgriffith$elm_ui$Element$centerX
+				]),
+			A2(
+				$mdgriffith$elm_ui$Element$el,
+				_Utils_ap(
+					attributes,
+					_List_fromArray(
+						[$mdgriffith$elm_ui$Element$alignBottom])),
+				child));
+	});
+var $mdgriffith$elm_ui$Internal$Model$Top = {$: 'Top'};
+var $mdgriffith$elm_ui$Element$alignTop = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Top);
+var $author$project$Main$tableCell = F2(
+	function (attributes, child) {
+		return A2(
+			$mdgriffith$elm_ui$Element$el,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
+					A2($mdgriffith$elm_ui$Element$paddingXY, 20, 6)
+				]),
+			A2(
+				$mdgriffith$elm_ui$Element$el,
+				_Utils_ap(
+					attributes,
+					_List_fromArray(
+						[$mdgriffith$elm_ui$Element$alignTop])),
+				child));
 	});
 var $mdgriffith$elm_ui$Internal$Model$Text = function (a) {
 	return {$: 'Text', a: a};
@@ -11491,8 +11512,9 @@ var $author$project$Main$codeColumn = function (row) {
 		case 'Single':
 			var record = row.a;
 			return A2(
-				$author$project$Main$cell,
-				$mdgriffith$elm_ui$Element$Font$alignLeft,
+				$author$project$Main$tableCell,
+				_List_fromArray(
+					[$mdgriffith$elm_ui$Element$centerX]),
 				$mdgriffith$elm_ui$Element$text(
 					function ($) {
 						return $.code;
@@ -11500,8 +11522,9 @@ var $author$project$Main$codeColumn = function (row) {
 		case 'Header':
 			var record = row.a;
 			return A2(
-				$author$project$Main$cell,
-				$mdgriffith$elm_ui$Element$Font$alignLeft,
+				$author$project$Main$tableCell,
+				_List_fromArray(
+					[$mdgriffith$elm_ui$Element$centerX]),
 				$mdgriffith$elm_ui$Element$text(
 					function ($) {
 						return $.code;
@@ -11512,10 +11535,6 @@ var $author$project$Main$codeColumn = function (row) {
 			return A2($author$project$Main$sumCell, _List_Nil, $mdgriffith$elm_ui$Element$none);
 	}
 };
-var $mdgriffith$elm_ui$Internal$Model$Fill = function (a) {
-	return {$: 'Fill', a: a};
-};
-var $mdgriffith$elm_ui$Element$fill = $mdgriffith$elm_ui$Internal$Model$Fill(1);
 var $author$project$Main$ModuleAndPartIndex = F2(
 	function (a, b) {
 		return {$: 'ModuleAndPartIndex', a: a, b: b};
@@ -11523,12 +11542,8 @@ var $author$project$Main$ModuleAndPartIndex = F2(
 var $author$project$Main$ModuleIndex = function (a) {
 	return {$: 'ModuleIndex', a: a};
 };
-var $mdgriffith$elm_ui$Element$Font$alignRight = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontAlignment, $mdgriffith$elm_ui$Internal$Style$classes.textRight);
-var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
-	return {$: 'AlignX', a: a};
-};
-var $mdgriffith$elm_ui$Internal$Model$CenterX = {$: 'CenterX'};
-var $mdgriffith$elm_ui$Element$centerX = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$CenterX);
+var $mdgriffith$elm_ui$Internal$Model$Right = {$: 'Right'};
+var $mdgriffith$elm_ui$Element$alignRight = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Right);
 var $author$project$Main$Fail = {$: 'Fail'};
 var $author$project$Main$First = {$: 'First'};
 var $author$project$Main$Five = {$: 'Five'};
@@ -11569,6 +11584,8 @@ var $author$project$Main$getSingleGrade = function (grade) {
 	}
 };
 var $mdgriffith$elm_ui$Element$Input$Selected = {$: 'Selected'};
+var $mdgriffith$elm_ui$Internal$Model$CenterY = {$: 'CenterY'};
+var $mdgriffith$elm_ui$Element$centerY = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$CenterY);
 var $mdgriffith$elm_ui$Element$Background$color = function (clr) {
 	return A2(
 		$mdgriffith$elm_ui$Internal$Model$StyleClass,
@@ -12648,8 +12665,9 @@ var $author$project$Main$gradeColumn = F2(
 			case 'Single':
 				var mod = r.a;
 				return A2(
-					$author$project$Main$cell,
-					$mdgriffith$elm_ui$Element$centerX,
+					$author$project$Main$tableCell,
+					_List_fromArray(
+						[$mdgriffith$elm_ui$Element$centerX]),
 					A2(
 						$author$project$Main$gradeButtons,
 						$author$project$Main$ModuleIndex(mod.moduleIndex),
@@ -12657,14 +12675,16 @@ var $author$project$Main$gradeColumn = F2(
 			case 'Header':
 				var h = r.a;
 				return A2(
-					$author$project$Main$cell,
-					$mdgriffith$elm_ui$Element$Font$center,
+					$author$project$Main$tableCell,
+					_List_fromArray(
+						[$mdgriffith$elm_ui$Element$centerX]),
 					A2($author$project$Main$viewAverageModuleGrade, h.moduleIndex, modules));
 			case 'Part':
 				var part = r.a;
 				return A2(
-					$author$project$Main$cell,
-					$mdgriffith$elm_ui$Element$centerX,
+					$author$project$Main$tableCell,
+					_List_fromArray(
+						[$mdgriffith$elm_ui$Element$centerX]),
 					A2(
 						$author$project$Main$gradeButtons,
 						A2($author$project$Main$ModuleAndPartIndex, part.moduleIndex, part.partIndex),
@@ -12673,7 +12693,7 @@ var $author$project$Main$gradeColumn = F2(
 				return A2(
 					$author$project$Main$sumCell,
 					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$Font$bold, $mdgriffith$elm_ui$Element$Font$alignRight]),
+						[$mdgriffith$elm_ui$Element$Font$bold, $mdgriffith$elm_ui$Element$alignRight]),
 					$mdgriffith$elm_ui$Element$text('Sum'));
 		}
 	});
@@ -12683,6 +12703,24 @@ var $elm$core$Basics$always = F2(
 	});
 var $mdgriffith$elm_ui$Internal$Model$unstyled = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Unstyled, $elm$core$Basics$always);
 var $mdgriffith$elm_ui$Element$html = $mdgriffith$elm_ui$Internal$Model$unstyled;
+var $elm$core$List$intersperse = F2(
+	function (sep, xs) {
+		if (!xs.b) {
+			return _List_Nil;
+		} else {
+			var hd = xs.a;
+			var tl = xs.b;
+			var step = F2(
+				function (x, rest) {
+					return A2(
+						$elm$core$List$cons,
+						sep,
+						A2($elm$core$List$cons, x, rest));
+				});
+			var spersed = A3($elm$core$List$foldr, step, _List_Nil, tl);
+			return A2($elm$core$List$cons, hd, spersed);
+		}
+	});
 var $author$project$Main$Sum = {$: 'Sum'};
 var $elm_community$array_extra$Array$Extra$indexedMapToList = function (mapIndexedElement) {
 	return function (array) {
@@ -12752,6 +12790,7 @@ var $author$project$Main$modulesToRows = function (ms) {
 		_List_fromArray(
 			[$author$project$Main$Sum]));
 };
+var $mdgriffith$elm_ui$Element$Font$alignLeft = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontAlignment, $mdgriffith$elm_ui$Internal$Style$classes.textLeft);
 var $mdgriffith$elm_ui$Internal$Model$Paragraph = {$: 'Paragraph'};
 var $mdgriffith$elm_ui$Internal$Model$SpacingStyle = F3(
 	function (a, b, c) {
@@ -12790,6 +12829,10 @@ var $mdgriffith$elm_ui$Element$paragraph = F2(
 						attrs))),
 			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
+var $mdgriffith$elm_ui$Internal$Model$Px = function (a) {
+	return {$: 'Px', a: a};
+};
+var $mdgriffith$elm_ui$Element$px = $mdgriffith$elm_ui$Internal$Model$Px;
 var $mdgriffith$elm_ui$Element$row = F2(
 	function (attrs, children) {
 		return A4(
@@ -12808,14 +12851,13 @@ var $mdgriffith$elm_ui$Element$row = F2(
 						attrs))),
 			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
-var $author$project$Main$zeroPadding = {bottom: 0, left: 0, right: 0, top: 0};
 var $author$project$Main$nameColumn = function (r) {
 	switch (r.$) {
 		case 'Single':
 			var record = r.a;
 			return A2(
-				$author$project$Main$cell,
-				$mdgriffith$elm_ui$Element$Font$alignLeft,
+				$author$project$Main$tableCell,
+				_List_Nil,
 				$mdgriffith$elm_ui$Element$text(
 					function ($) {
 						return $.name;
@@ -12823,55 +12865,53 @@ var $author$project$Main$nameColumn = function (r) {
 		case 'Header':
 			var record = r.a;
 			return A2(
-				$mdgriffith$elm_ui$Element$paragraph,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$Font$alignLeft,
-						A2($mdgriffith$elm_ui$Element$paddingXY, 20, 10)
-					]),
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$text(
-						function ($) {
-							return $.name;
-						}(record))
-					]));
+				$author$project$Main$tableCell,
+				_List_Nil,
+				A2(
+					$mdgriffith$elm_ui$Element$paragraph,
+					_List_fromArray(
+						[$mdgriffith$elm_ui$Element$Font$alignLeft]),
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$text(
+							function ($) {
+								return $.name;
+							}(record))
+						])));
 		case 'Part':
 			var record = r.a;
 			return A2(
-				$mdgriffith$elm_ui$Element$row,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$paddingEach(
-						_Utils_update(
-							$author$project$Main$zeroPadding,
-							{left: 20, top: 6}))
-					]),
-				_List_fromArray(
-					[
-						A2(
-						$mdgriffith$elm_ui$Element$paragraph,
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$Font$alignLeft,
-								A2($mdgriffith$elm_ui$Element$paddingXY, 20, 6)
-							]),
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$text(
-								function ($) {
-									return $.name;
-								}(record))
-							]))
-					]));
+				$author$project$Main$tableCell,
+				_List_Nil,
+				A2(
+					$mdgriffith$elm_ui$Element$row,
+					_List_Nil,
+					_List_fromArray(
+						[
+							A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$width(
+									$mdgriffith$elm_ui$Element$px(20))
+								]),
+							$mdgriffith$elm_ui$Element$none),
+							A2(
+							$mdgriffith$elm_ui$Element$paragraph,
+							_List_fromArray(
+								[$mdgriffith$elm_ui$Element$Font$alignLeft]),
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$text(
+									function ($) {
+										return $.name;
+									}(record))
+								]))
+						])));
 		default:
 			return A2($author$project$Main$sumCell, _List_Nil, $mdgriffith$elm_ui$Element$none);
 	}
 };
-var $mdgriffith$elm_ui$Internal$Model$Px = function (a) {
-	return {$: 'Px', a: a};
-};
-var $mdgriffith$elm_ui$Element$px = $mdgriffith$elm_ui$Internal$Model$Px;
 var $mdgriffith$elm_ui$Element$InternalColumn = function (a) {
 	return {$: 'InternalColumn', a: a};
 };
@@ -13123,8 +13163,9 @@ var $author$project$Main$weightColumn = F2(
 			case 'Single':
 				var record = row.a;
 				return A2(
-					$author$project$Main$cell,
-					$mdgriffith$elm_ui$Element$Font$center,
+					$author$project$Main$tableCell,
+					_List_fromArray(
+						[$mdgriffith$elm_ui$Element$centerX]),
 					$mdgriffith$elm_ui$Element$text(
 						$elm$core$String$fromInt(
 							function ($) {
@@ -13133,8 +13174,9 @@ var $author$project$Main$weightColumn = F2(
 			case 'Header':
 				var record = row.a;
 				return A2(
-					$author$project$Main$cell,
-					$mdgriffith$elm_ui$Element$Font$center,
+					$author$project$Main$tableCell,
+					_List_fromArray(
+						[$mdgriffith$elm_ui$Element$centerX]),
 					$mdgriffith$elm_ui$Element$text(
 						$elm$core$String$fromInt(
 							function ($) {
@@ -13154,7 +13196,7 @@ var $author$project$Main$weightColumn = F2(
 				return A2(
 					$author$project$Main$sumCell,
 					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$Font$center]),
+						[$mdgriffith$elm_ui$Element$centerX]),
 					$mdgriffith$elm_ui$Element$text(
 						$elm$core$String$fromInt(totalWeight)));
 		}
@@ -13276,14 +13318,16 @@ var $author$project$Main$weightedColumn = F2(
 			case 'Single':
 				var s = w.a;
 				return A2(
-					$author$project$Main$cell,
-					$mdgriffith$elm_ui$Element$Font$center,
+					$author$project$Main$tableCell,
+					_List_fromArray(
+						[$mdgriffith$elm_ui$Element$centerX]),
 					A2($author$project$Main$viewModuleAverageWeightedGrade, s.moduleIndex, modules));
 			case 'Header':
 				var h = w.a;
 				return A2(
-					$author$project$Main$cell,
-					$mdgriffith$elm_ui$Element$Font$center,
+					$author$project$Main$tableCell,
+					_List_fromArray(
+						[$mdgriffith$elm_ui$Element$centerX]),
 					A2($author$project$Main$viewModuleAverageWeightedGrade, h.moduleIndex, modules));
 			case 'Part':
 				return $mdgriffith$elm_ui$Element$none;
@@ -13301,47 +13345,41 @@ var $author$project$Main$weightedColumn = F2(
 				return A2(
 					$author$project$Main$sumCell,
 					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$Font$center]),
+						[$mdgriffith$elm_ui$Element$centerX]),
 					$mdgriffith$elm_ui$Element$text(sum));
 		}
 	});
 var $author$project$Main$modulesTable = function (modules) {
-	var header2 = F2(
-		function (alignment, content) {
+	var headerCell = F2(
+		function (attributes, child) {
 			return A2(
 				$mdgriffith$elm_ui$Element$el,
 				_List_fromArray(
 					[
-						alignment,
-						$mdgriffith$elm_ui$Element$height(
-						$mdgriffith$elm_ui$Element$px(50)),
-						$mdgriffith$elm_ui$Element$Font$bold,
-						$mdgriffith$elm_ui$Element$Border$widthEach(
-						{bottom: 2, left: 0, right: 0, top: 0}),
-						A2($mdgriffith$elm_ui$Element$paddingXY, 20, 6)
-					]),
-				content);
-		});
-	var header = F2(
-		function (alignment, txt) {
-			return A2(
-				$mdgriffith$elm_ui$Element$el,
-				_List_fromArray(
-					[
-						alignment,
+						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
 						$mdgriffith$elm_ui$Element$Font$bold,
 						$mdgriffith$elm_ui$Element$Border$widthEach(
 						{bottom: 2, left: 0, right: 0, top: 0}),
 						A2($mdgriffith$elm_ui$Element$paddingXY, 20, 6)
 					]),
 				A2(
-					$mdgriffith$elm_ui$Element$paragraph,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$text(txt)
-						])));
+					$mdgriffith$elm_ui$Element$el,
+					_Utils_ap(
+						attributes,
+						_List_fromArray(
+							[$mdgriffith$elm_ui$Element$alignBottom])),
+					child));
 		});
+	var centeredStrings = function (strings) {
+		return A2(
+			$mdgriffith$elm_ui$Element$paragraph,
+			_List_Nil,
+			A2(
+				$elm$core$List$intersperse,
+				$mdgriffith$elm_ui$Element$html(
+					A2($elm$html$Html$br, _List_Nil, _List_Nil)),
+				A2($elm$core$List$map, $mdgriffith$elm_ui$Element$text, strings)));
+	};
 	return A2(
 		$mdgriffith$elm_ui$Element$table,
 		_List_Nil,
@@ -13350,92 +13388,68 @@ var $author$project$Main$modulesTable = function (modules) {
 				[
 					{
 					header: A2(
-						header2,
-						$mdgriffith$elm_ui$Element$Font$alignLeft,
-						A2(
-							$mdgriffith$elm_ui$Element$paragraph,
-							_List_Nil,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$text(''),
-									$mdgriffith$elm_ui$Element$html(
-									A2($elm$html$Html$br, _List_Nil, _List_Nil)),
-									$mdgriffith$elm_ui$Element$text('Code')
-								]))),
+						headerCell,
+						_List_fromArray(
+							[$mdgriffith$elm_ui$Element$centerX]),
+						$mdgriffith$elm_ui$Element$text('Code')),
 					view: $author$project$Main$codeColumn,
 					width: $mdgriffith$elm_ui$Element$shrink
 				},
 					{
 					header: A2(
-						header2,
-						$mdgriffith$elm_ui$Element$Font$alignLeft,
-						A2(
-							$mdgriffith$elm_ui$Element$paragraph,
-							_List_Nil,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$text(''),
-									$mdgriffith$elm_ui$Element$html(
-									A2($elm$html$Html$br, _List_Nil, _List_Nil)),
-									$mdgriffith$elm_ui$Element$text('Ladok module')
-								]))),
+						headerCell,
+						_List_Nil,
+						$mdgriffith$elm_ui$Element$text('Ladok module')),
 					view: $author$project$Main$nameColumn,
 					width: $mdgriffith$elm_ui$Element$fill
 				},
 					{
 					header: A2(
-						header2,
-						$mdgriffith$elm_ui$Element$Font$center,
-						A2(
-							$mdgriffith$elm_ui$Element$paragraph,
-							_List_Nil,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$text(''),
-									$mdgriffith$elm_ui$Element$html(
-									A2($elm$html$Html$br, _List_Nil, _List_Nil)),
-									$mdgriffith$elm_ui$Element$text('Grade')
-								]))),
+						headerCell,
+						_List_fromArray(
+							[$mdgriffith$elm_ui$Element$centerX]),
+						$mdgriffith$elm_ui$Element$text('Grade')),
 					view: $author$project$Main$gradeColumn(modules),
 					width: $mdgriffith$elm_ui$Element$shrink
 				},
 					{
 					header: A2(
-						header2,
-						$mdgriffith$elm_ui$Element$Font$center,
-						A2(
-							$mdgriffith$elm_ui$Element$paragraph,
-							_List_Nil,
+						headerCell,
+						_List_fromArray(
+							[$mdgriffith$elm_ui$Element$Font$center]),
+						centeredStrings(
 							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$text('Weight'),
-									$mdgriffith$elm_ui$Element$html(
-									A2($elm$html$Html$br, _List_Nil, _List_Nil)),
-									$mdgriffith$elm_ui$Element$text('(credits)')
-								]))),
+								['Weight', '(credits)']))),
 					view: $author$project$Main$weightColumn(modules),
 					width: $mdgriffith$elm_ui$Element$shrink
 				},
 					{
 					header: A2(
-						header2,
-						$mdgriffith$elm_ui$Element$Font$center,
-						A2(
-							$mdgriffith$elm_ui$Element$paragraph,
-							_List_Nil,
+						headerCell,
+						_List_fromArray(
+							[$mdgriffith$elm_ui$Element$Font$center]),
+						centeredStrings(
 							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$text('Weighted'),
-									$mdgriffith$elm_ui$Element$html(
-									A2($elm$html$Html$br, _List_Nil, _List_Nil)),
-									$mdgriffith$elm_ui$Element$text('grade')
-								]))),
+								['Weighted', 'grade']))),
 					view: $author$project$Main$weightedColumn(modules),
 					width: $mdgriffith$elm_ui$Element$shrink
 				}
 				]),
 			data: $author$project$Main$modulesToRows(modules)
 		});
+};
+var $mdgriffith$elm_ui$Element$padding = function (x) {
+	var f = x;
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$padding,
+		A5(
+			$mdgriffith$elm_ui$Internal$Model$PaddingStyle,
+			'p-' + $elm$core$String$fromInt(x),
+			f,
+			f,
+			f,
+			f));
 };
 var $author$project$Main$viewFinalGrade = function (model) {
 	return A2(
@@ -13484,7 +13498,10 @@ var $author$project$Main$viewFinalGrade = function (model) {
 var $author$project$Main$view = function (model) {
 	return A2(
 		$mdgriffith$elm_ui$Element$layout,
-		_List_Nil,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$padding(20)
+			]),
 		A2(
 			$mdgriffith$elm_ui$Element$column,
 			_List_fromArray(
