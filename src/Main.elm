@@ -137,8 +137,7 @@ finalGrade modules =
     Array.toList modules
         |> List.map (\mod -> ( .credits mod, .grades mod ) |> Tuple2.maybeMapSecond averageGrade)
         |> Maybe.Extra.combine
-        |> Maybe.map (List.foldl (\( w, g ) ( wSum, gSum ) -> ( w + wSum, (toFloat w * g) + gSum )) ( 0, 0 ))
-        |> Maybe.map (\( totalWeight, sum ) -> ( totalWeight, round sum ))
+        |> Maybe.map (List.foldl (\( w, g ) ( wSum, gSum ) -> ( w + wSum, (w * round g) + gSum )) ( 0, 0 ))
 
 
 defaultGrade : Grade
