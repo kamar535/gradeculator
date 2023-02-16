@@ -717,7 +717,7 @@ update msg model =
 main : Program () Model Msg
 main =
     Browser.sandbox
-        { init = osppModules
+        { init = dspModules -- osppModules
         , view = view
         , update = update
         }
