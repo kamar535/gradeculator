@@ -13243,42 +13243,35 @@ var $TSFoster$elm_tuple_extra$Tuple2$maybeMapSecond = F2(
 var $author$project$Main$finalGrade = function (modules) {
 	return A2(
 		$elm$core$Maybe$map,
-		function (_v2) {
-			var totalWeight = _v2.a;
-			var sum = _v2.b;
-			return _Utils_Tuple2(
-				totalWeight,
-				$elm$core$Basics$round(sum));
-		},
 		A2(
-			$elm$core$Maybe$map,
+			$elm$core$List$foldl,
+			F2(
+				function (_v0, _v1) {
+					var w = _v0.a;
+					var g = _v0.b;
+					var wSum = _v1.a;
+					var gSum = _v1.b;
+					return _Utils_Tuple2(
+						w + wSum,
+						(w * $elm$core$Basics$round(g)) + gSum);
+				}),
+			_Utils_Tuple2(0, 0)),
+		$elm_community$maybe_extra$Maybe$Extra$combine(
 			A2(
-				$elm$core$List$foldl,
-				F2(
-					function (_v0, _v1) {
-						var w = _v0.a;
-						var g = _v0.b;
-						var wSum = _v1.a;
-						var gSum = _v1.b;
-						return _Utils_Tuple2(w + wSum, (w * g) + gSum);
-					}),
-				_Utils_Tuple2(0, 0)),
-			$elm_community$maybe_extra$Maybe$Extra$combine(
-				A2(
-					$elm$core$List$map,
-					function (mod) {
-						return A2(
-							$TSFoster$elm_tuple_extra$Tuple2$maybeMapSecond,
-							$author$project$Main$averageGrade,
-							_Utils_Tuple2(
-								function ($) {
-									return $.credits;
-								}(mod),
-								function ($) {
-									return $.grades;
-								}(mod)));
-					},
-					$elm$core$Array$toList(modules)))));
+				$elm$core$List$map,
+				function (mod) {
+					return A2(
+						$TSFoster$elm_tuple_extra$Tuple2$maybeMapSecond,
+						$author$project$Main$averageGrade,
+						_Utils_Tuple2(
+							function ($) {
+								return $.credits;
+							}(mod),
+							function ($) {
+								return $.grades;
+							}(mod)));
+				},
+				$elm$core$Array$toList(modules))));
 };
 var $author$project$Main$moduleWeightAndAveragageGradeFromIndex = F2(
 	function (moduleIndex, modules) {
