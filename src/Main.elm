@@ -80,6 +80,26 @@ thresholdGrade grade4 grade5 pts max =
     { points = pts, four = grade4, five = grade5, grade = grade, max = max }
 
 
+thresholdGradeV44 four five ( allPass, points, max ) =
+    let
+        grade =
+            if allPass then
+                Just <|
+                    if points >= five then
+                        5
+
+                    else if points >= four then
+                        4
+
+                    else
+                        3
+
+            else
+                Nothing
+    in
+    { points = points, four = four, five = five, grade = grade, max = max }
+
+
 
 --thresholdGradeV2 : ThresholdAssignments -> Maybe ( Int, Int )
 
@@ -191,26 +211,29 @@ viewThresholdModuleGrade moduleIndex modules =
         Nothing ->
             text <| "Error: Invalid module index " ++ String.fromInt moduleIndex
 
-        Just Nothing ->
-            text "No grade"
-
-        Just (Just tg) ->
+        Just tg ->
             column [ spacing 20 ]
-                [ el [ centerX ] <| (thresholdGradeString ( tg.grade, tg.points, tg.max ) |> text)
+                [ el [ centerX ] <|
+                    text <|
+                        thresholdGradeString ( tg.grade, tg.points, tg.max )
                 , thresholdsV2 tg
+                , row [ centerX, spacing 20 ] [ el [] <| text "Mandatory", el [] <| text "Higher grade points" ]
                 ]
 
 
-moduleThresholdGradeFromModuleIndex : Int -> Array.Array Module -> Maybe (Maybe { points : Int, four : Int, five : Int, max : Int, grade : Int })
+moduleThresholdGradeFromModuleIndex : Int -> Array.Array Module -> Maybe ThresholdResult
 moduleThresholdGradeFromModuleIndex moduleIndex modules =
     Array.get moduleIndex modules
         |> Maybe.map .assignments
-        |> Maybe.map thresholdGradeV3
+        |> Maybe.map thresholdGradeV4
+        |> Maybe.Extra.join
 
 
-thresholdGradeString : ( Int, Int, Int ) -> String
+thresholdGradeString : ( Maybe Int, Int, Int ) -> String
 thresholdGradeString ( grade, points, max ) =
-    String.fromInt grade ++ " (" ++ String.fromInt points ++ " of " ++ String.fromInt max ++ " points)"
+    grade
+        |> Maybe.map (\g -> String.fromInt g ++ " (" ++ String.fromInt points ++ " of " ++ String.fromInt max ++ " points)")
+        |> Maybe.withDefault "No grade"
 
 
 thresholdGradeV3 : Assignments -> Maybe { points : Int, four : Int, five : Int, max : Int, grade : Int }
@@ -241,6 +264,31 @@ thresholdGradeV3 assignments =
 
 --|> Maybe.map List.sum
 --|> Maybe.map (thresholdGrade four five)
+
+
+type alias ThresholdResult =
+    { points : Int, four : Int, five : Int, max : Int, grade : Maybe Int }
+
+
+thresholdGradeV4 : Assignments -> Maybe ThresholdResult
+thresholdGradeV4 assignments =
+    case assignments of
+        SingleGrade _ ->
+            Nothing
+
+        AverageGrade _ ->
+            Nothing
+
+        ThresholdGrade four five tas ->
+            tas
+                |> Array.toList
+                |> List.map
+                    (\a ->
+                        ( a.grade == MandatoryPass, a.higherGradePoints, a.higherGradeMaxPoints )
+                    )
+                |> List.foldl (\( b, x, y ) ( bb, xx, yy ) -> ( b && bb, x + xx, y + yy )) ( True, 0, 0 )
+                |> thresholdGradeV44 four five
+                |> Just
 
 
 type alias AverageGradePart =
@@ -617,7 +665,7 @@ pills start n nColored =
                )
 
 
-thresholdsV2 : { points : Int, four : Int, five : Int, max : Int, grade : Int } -> Element Msg
+thresholdsV2 : ThresholdResult -> Element Msg
 thresholdsV2 rec =
     let
         pThree =
@@ -651,12 +699,17 @@ thresholdsV2 rec =
                 0
 
         labelAttribute label =
-            [ centerX ]
-                ++ (if label == rec.grade then
-                        [ Font.bold ]
+            centerX
+                :: (rec.grade
+                        |> Maybe.map
+                            (\g ->
+                                if label == g then
+                                    [ Font.bold ]
 
-                    else
-                        []
+                                else
+                                    []
+                            )
+                        |> Maybe.withDefault []
                    )
     in
     row [ spacing 16 ]
