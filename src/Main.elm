@@ -372,7 +372,7 @@ viewAverageModuleGrade moduleIndex modules =
             text "No grade"
 
         Just (Just avg) ->
-            text <| (String.fromInt <| round avg) ++ " (" ++ Round.round 2 avg ++ ")"
+            text <| (String.fromInt <| round avg) ++ " (average " ++ Round.round 2 avg ++ ")"
 
 
 averageModuleGradeFromIndex : Int -> Array.Array Module -> Maybe (Maybe Float)
@@ -1224,7 +1224,7 @@ gradeColumn modules r =
             in
             tableCell [ centerX ] <|
                 row [ centerX, spacing 20 ]
-                    [ failPassButtons (ModuleAndPartIndex assignment.moduleIndex assignment.partIndex) modules
+                    [ el [ width (px 60), centerX ] <| failPassButtons (ModuleAndPartIndex assignment.moduleIndex assignment.partIndex) modules
                     , higherGradePointsButtons assignment.moduleIndex assignment.partIndex assignment.maxPoints selected
                     ]
 
