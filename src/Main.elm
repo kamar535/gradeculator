@@ -1,8 +1,6 @@
 module Main exposing (..)
 
--- TO READ: https://thoughtbot.com/blog/running-out-of-maps
-
-import Array
+import Array exposing (Array)
 import Array.Extra
 import Browser
 import Element exposing (..)
@@ -10,435 +8,700 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import Html exposing (Html, br, i)
-import List
+import Html exposing (Html)
 import Maybe.Extra
 import Round
-import String
-import Tuple2
+import Tuple.Extra
 
 
-type Grade
-    = Fail
-    | Three
-    | Four
-    | Five
+
+---- MODEL ----
 
 
-gradeToString : Grade -> String
-gradeToString grade =
-    case grade of
-        Fail ->
-            "F"
-
-        Three ->
-            "3"
-
-        Four ->
-            "4"
-
-        Five ->
-            "5"
+type alias Model =
+    Array Module
 
 
 type alias Module =
     { code : String
     , name : String
     , credits : Int
-    , grades : Grades
+    , assignments : Assignments
     }
 
 
-type Grades
-    = SingleGrade Grade
-    | Grades (Array.Array ModulePart)
+type Assignments
+    = SingleGrade345 (Maybe Grade345)
+    | AverageGrade345 (Array Grade345Assignment)
+    | Points PointsAssignments
 
 
-type alias ModulePart =
+type Grade345
+    = Three
+    | Four
+    | Five
+
+
+type alias Grade345Assignment =
     { name : String
-    , grade : Grade
+    , grade : Maybe Grade345
     }
 
 
-gradeToMaybeFloat : Grade -> Maybe Float
-gradeToMaybeFloat grade =
+type alias PointsAssignments =
+    { four : Int
+    , five : Int
+    , assignments : Array PointsAssignment
+    }
+
+
+type alias PointsAssignment =
+    { name : String
+    , mandatoryPass : Bool
+    , max : Int
+    , points : Int
+    }
+
+
+type ModuleGrade
+    = SingleModuleGrade (Maybe Grade345)
+    | AverageModuleGrade (Maybe { grade : Grade345, average : Float })
+    | PointesModuleGrade
+        { grade : Maybe Grade345
+        , points : Int
+        , four : Int
+        , five : Int
+        , max : Int
+        }
+
+
+
+---- Functions ----
+
+
+moduleGradeToMaybeInt : ModuleGrade -> Maybe Int
+moduleGradeToMaybeInt grade =
     case grade of
-        Fail ->
+        SingleModuleGrade g ->
+            g |> Maybe.map grade345ToInt
+
+        AverageModuleGrade (Just g) ->
+            Just <| grade345ToInt g.grade
+
+        AverageModuleGrade Nothing ->
             Nothing
 
-        Three ->
-            Just 3
-
-        Four ->
-            Just 4
-
-        Five ->
-            Just 5
+        PointesModuleGrade g ->
+            g.grade |> Maybe.map grade345ToInt
 
 
-moduleWeightAndAveragageGradeFromIndex : Int -> Array.Array Module -> Maybe ( Int, Maybe Float )
-moduleWeightAndAveragageGradeFromIndex moduleIndex modules =
-    Array.get moduleIndex modules
-        |> Maybe.map (\m -> ( m.credits, averageModuleGrade m ))
+singleGrade345 : Assignments
+singleGrade345 =
+    SingleGrade345 (Just Three)
 
 
-viewModuleAverageWeightedGrade : Int -> Array.Array Module -> Element Msg
-viewModuleAverageWeightedGrade moduleIndex modules =
-    case moduleWeightAndAveragageGradeFromIndex moduleIndex modules of
-        Nothing ->
-            text <| "Error: Invalid module index " ++ String.fromInt moduleIndex
-
-        Just ( _, Nothing ) ->
-            text "No grade"
-
-        Just ( w, Just avg ) ->
-            text <| String.fromInt <| w * round avg
+averageGrade345 : List String -> Assignments
+averageGrade345 names =
+    names
+        |> List.map (\name -> { name = name, grade = Just Three })
+        |> Array.fromList
+        |> AverageGrade345
 
 
-viewAverageModuleGrade : Int -> Array.Array Module -> Element Msg
-viewAverageModuleGrade moduleIndex modules =
-    case averageModuleGradeFromIndex moduleIndex modules of
-        Nothing ->
-            text <| "Error: Invalid module index " ++ String.fromInt moduleIndex
-
-        Just Nothing ->
-            text "No grade"
-
-        Just (Just avg) ->
-            text <| (String.fromInt <| round avg) ++ " (" ++ Round.round 2 avg ++ ")"
-
-
-averageModuleGradeFromIndex : Int -> Array.Array Module -> Maybe (Maybe Float)
-averageModuleGradeFromIndex moduleIndex modules =
-    Array.get moduleIndex modules |> Maybe.map averageModuleGrade
-
-
-averageModuleGrade : Module -> Maybe Float
-averageModuleGrade m =
-    averageGrade m.grades
-
-
-averageGrade : Grades -> Maybe Float
-averageGrade grades =
-    case grades of
-        SingleGrade g ->
-            gradeToMaybeFloat g
-
-        Grades gs ->
-            Array.toList gs
-                |> List.map .grade
-                |> Maybe.Extra.traverse gradeToMaybeFloat
-                |> Maybe.map List.sum
-                |> Maybe.map (\tot -> tot / toFloat (Array.length gs))
-
-
-finalGrade : Array.Array { a | credits : Int, grades : Grades } -> Maybe ( Int, Int )
-finalGrade modules =
-    Array.toList modules
-        |> List.map (\mod -> ( .credits mod, .grades mod ) |> Tuple2.maybeMapSecond averageGrade)
-        |> Maybe.Extra.combine
-        |> Maybe.map (List.foldl (\( w, g ) ( wSum, gSum ) -> ( w + wSum, (w * round g) + gSum )) ( 0, 0 ))
-
-
-defaultGrade : Grade
-defaultGrade =
-    Three
-
-
-initPart : String -> ModulePart
-initPart n =
-    { name = n
-    , grade = defaultGrade
+higherGradeAssignment : String -> Int -> PointsAssignment
+higherGradeAssignment name max =
+    { name = name
+    , mandatoryPass = True
+    , max = max
+    , points = 0
     }
 
 
-singleGrade : Grades
-singleGrade =
-    SingleGrade defaultGrade
+higherGradeAssignments : Int -> Int -> List ( String, Int ) -> Assignments
+higherGradeAssignments four five assignments =
+    Points
+        { four = four
+        , five = five
+        , assignments =
+            assignments
+                |> List.map (\( name, max ) -> higherGradeAssignment name max)
+                |> Array.fromList
+        }
 
 
-multipleGrades : List String -> Grades
-multipleGrades names =
-    Grades <| initModuleParts names
+moduleGrade : Module -> ModuleGrade
+moduleGrade m =
+    case m.assignments of
+        SingleGrade345 maybeGrade345 ->
+            SingleModuleGrade maybeGrade345
+
+        AverageGrade345 assignments ->
+            averageGrade assignments
+
+        Points assignments ->
+            pointsGrade assignments
+
+
+averageGradeHelper : Array Grade345Assignment -> Maybe { grade : Grade345, average : Float }
+averageGradeHelper assignments =
+    assignments
+        |> Array.map .grade
+        |> Array.toList
+        |> Maybe.Extra.combine
+        |> Maybe.map
+            (\grades ->
+                List.map grade345ToInt grades
+                    |> List.sum
+                    |> (\sum -> toFloat sum / toFloat (Array.length assignments))
+            )
+        |> Maybe.andThen
+            (\average ->
+                ( intToGrade345 (round average), Just average ) |> Tuple.Extra.sequenceMaybe
+            )
+        |> Maybe.map (\( grade, average ) -> { grade = grade, average = average })
+
+
+averageGrade : Array Grade345Assignment -> ModuleGrade
+averageGrade assignments =
+    assignments
+        |> averageGradeHelper
+        |> AverageModuleGrade
+
+
+pointsToGrade345 : Int -> Int -> Int -> Grade345
+pointsToGrade345 points four five =
+    if points >= five then
+        Five
+
+    else if points >= four then
+        Four
+
+    else
+        Three
+
+
+pointsGradeHelper :
+    PointsAssignments
+    ->
+        { grade : Maybe Grade345
+        , points : Int
+        , four : Int
+        , five : Int
+        , max : Int
+        }
+pointsGradeHelper assignments =
+    assignments.assignments
+        |> Array.map (\assignment -> ( assignment.mandatoryPass, assignment.points, assignment.max ))
+        |> Array.foldl
+            (combine3Tuples
+                (&&)
+                (+)
+                (+)
+            )
+            ( True, 0, 0 )
+        |> (\( allMandatoryPass, points, max ) ->
+                let
+                    grade =
+                        if allMandatoryPass then
+                            Just <| pointsToGrade345 points assignments.four assignments.five
+
+                        else
+                            Nothing
+                in
+                { grade = grade, points = points, max = max, four = assignments.four, five = assignments.five }
+           )
+
+
+pointsGrade : PointsAssignments -> ModuleGrade
+pointsGrade assignments =
+    PointesModuleGrade <| pointsGradeHelper assignments
+
+
+grade345ToInt : Grade345 -> Int
+grade345ToInt grade =
+    case grade of
+        Three ->
+            3
+
+        Four ->
+            4
+
+        Five ->
+            5
+
+
+intToGrade345 : Int -> Maybe Grade345
+intToGrade345 grade =
+    case grade of
+        3 ->
+            Just Three
+
+        4 ->
+            Just Four
+
+        5 ->
+            Just Five
+
+        _ ->
+            Nothing
+
+
+tupleMap3 : (a -> x) -> (b -> y) -> (c -> z) -> ( a, b, c ) -> ( x, y, z )
+tupleMap3 f g h ( a, b, c ) =
+    ( f a, g b, h c )
+
+
+combine3Tuples : (a -> a -> x) -> (b -> b -> y) -> (c -> c -> z) -> ( a, b, c ) -> ( a, b, c ) -> ( x, y, z )
+combine3Tuples f g h ( a, b, c ) ( aa, bb, cc ) =
+    ( f a aa, g b bb, h c cc )
+
+
+type alias FinalGrade =
+    { finalGrade : Maybe Float, credits : Int, weightedGrades : Maybe Int }
+
+
+finalGrade : Array Module -> FinalGrade
+finalGrade modules =
+    let
+        credits =
+            Array.map .credits modules |> Array.toList |> List.sum
+
+        weightedGrades =
+            Array.map (\m -> ( m.credits, moduleGrade m |> moduleGradeToMaybeInt )) modules
+                |> Array.toList
+                |> List.map Tuple.Extra.sequenceSecondMaybe
+                |> Maybe.Extra.combine
+                |> Maybe.map (List.map (\( w, c ) -> w * c))
+                |> Maybe.map List.sum
+
+        fg =
+            Maybe.map toFloat weightedGrades
+                |> Maybe.map (\sum -> sum / toFloat credits)
+    in
+    { finalGrade = fg, credits = credits, weightedGrades = weightedGrades }
 
 
 
---- OSPP Modules
+---- Helper functions ----
 
 
-a1 : Module
-a1 =
+assignmentsPart1Average : Module
+assignmentsPart1Average =
+    { code = "2000"
+    , name = "Assignments (part 1, average)"
+    , credits = 2
+    , assignments =
+        averageGrade345
+            [ "Fundamental concepts"
+            , "The process concept"
+            , "Threads, synchronization and deadlock"
+            ]
+    }
+
+
+assignmentsPart1Points : Module
+assignmentsPart1Points =
     { code = "2000"
     , name = "Assignments (part 1)"
     , credits = 2
-    , grades = multipleGrades [ "Fundamental concepts", "The process concept", "Threads, synchronization and deadlock" ]
+    , assignments =
+        higherGradeAssignments 4
+            8
+            [ ( "Fundamental concepts", 3 )
+            , ( "The process concept", 3 )
+            , ( "Threads, synchronization and deadlock", 4 )
+            ]
     }
 
 
-e : Module
-e =
+writtenExam : Module
+writtenExam =
     { code = "3000"
     , name = "Written exam (part 1)"
     , credits = 1
-    , grades = singleGrade
+    , assignments = singleGrade345
     }
 
 
-a2 : Module
-a2 =
+assignmentsPart2 : Module
+assignmentsPart2 =
     { code = "5000"
     , name = "Assignments (part 2)"
     , credits = 1
-    , grades = singleGrade
+    , assignments = singleGrade345
     }
 
 
-pg : Module
-pg =
+projectGroup : Module
+projectGroup =
     { code = "6000"
     , name = "Project (group)"
     , credits = 2
-    , grades = singleGrade
+    , assignments = singleGrade345
     }
 
 
-pi : Module
-pi =
+projectIndividual : Module
+projectIndividual =
     { code = "7000"
     , name = "Project (individual)"
     , credits = 5
-    , grades = singleGrade
+    , assignments = singleGrade345
     }
 
 
-osppModules : Array.Array Module
-osppModules =
-    Array.fromList [ a1, e, a2, pg, pi ]
+testModel : Model
+testModel =
+    Array.fromList
+        [ assignmentsPart1Average
+        , assignmentsPart1Points
+        , writtenExam
+        , assignmentsPart2
+        , projectGroup
+        , projectIndividual
+        ]
+
+
+osppModel : Model
+osppModel =
+    Array.fromList
+        [ assignmentsPart1Points
+        , writtenExam
+        , assignmentsPart2
+        , projectGroup
+        , projectIndividual
+        ]
+
+
+init : ( Model, Cmd Msg )
+init =
+    ( osppModel, Cmd.none )
+
+
+getModuleGrade345 : Module -> Maybe Grade345
+getModuleGrade345 m =
+    let
+        grade =
+            moduleGrade m
+    in
+    case grade of
+        SingleModuleGrade g ->
+            g
+
+        _ ->
+            Nothing
 
 
 
---- DSP Modules
---- OSPP Modules
+---- UPDATE ----
 
 
-dspAssignments : Module
-dspAssignments =
-    { code = "2010"
-    , name = "Assignments"
-    , credits = 5
-    , grades = multipleGrades [ "Fundamental concepts", "The process concept", "Threads, synchronization and deadlock" ]
-    }
+type Msg
+    = SetSinglGrade345 Int (Maybe Grade345)
+    | SetAverageGrade345 Int Int (Maybe Grade345)
+    | SetMandatoryPass Int Int Bool
+    | SetHigherGradePoints Int Int Int
 
 
-dspExam : Module
-dspExam =
-    { code = "1010"
-    , name = "Written exam"
-    , credits = 2
-    , grades = singleGrade
-    }
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        SetSinglGrade345 moduleIndex grade ->
+            let
+                newModel =
+                    Array.Extra.update moduleIndex (updateSingleGrade grade) model
+            in
+            ( newModel, Cmd.none )
+
+        SetAverageGrade345 moduleIndex assignmentIndex grade ->
+            let
+                newModel =
+                    Array.Extra.update moduleIndex (updateAssignmentGrade assignmentIndex grade) model
+            in
+            ( newModel, Cmd.none )
+
+        SetMandatoryPass moduleIndex assignmentIndex pass ->
+            let
+                newModel =
+                    Array.Extra.update moduleIndex (updateMandatoryPass assignmentIndex pass) model
+            in
+            ( newModel, Cmd.none )
+
+        SetHigherGradePoints moduleIndex assignmentIndex points ->
+            let
+                newModel =
+                    Array.Extra.update moduleIndex (updateHigherGradePoints assignmentIndex points) model
+            in
+            ( newModel, Cmd.none )
 
 
-dspProjectGroup : Module
-dspProjectGroup =
-    { code = "3020"
-    , name = "Project (group)"
-    , credits = 2
-    , grades = singleGrade
-    }
+updateSingleGrade : Maybe Grade345 -> Module -> Module
+updateSingleGrade grade m =
+    case m.assignments of
+        SingleGrade345 _ ->
+            { m | assignments = SingleGrade345 grade }
+
+        _ ->
+            m
 
 
-dspProjectIndividual : Module
-dspProjectIndividual =
-    { code = "3010"
-    , name = "Project (individual)"
-    , credits = 5
-    , grades = singleGrade
-    }
+updateMandatoryPass : Int -> Bool -> Module -> Module
+updateMandatoryPass assignmentIndex pass m =
+    case m.assignments of
+        Points assignments ->
+            let
+                newAssignments : Array PointsAssignment
+                newAssignments =
+                    Array.Extra.update assignmentIndex (\a -> { a | mandatoryPass = pass }) assignments.assignments
+            in
+            { m | assignments = Points { assignments | assignments = newAssignments } }
+
+        _ ->
+            m
 
 
-dspModules =
-    Array.fromList [ dspExam, dspAssignments, dspProjectIndividual, dspProjectGroup ]
+updateHigherGradePoints : Int -> Int -> Module -> Module
+updateHigherGradePoints assignmentIndex points m =
+    case m.assignments of
+        Points assignments ->
+            let
+                newAssignments : Array PointsAssignment
+                newAssignments =
+                    Array.Extra.update assignmentIndex (\a -> { a | points = points }) assignments.assignments
+            in
+            { m | assignments = Points { assignments | assignments = newAssignments } }
+
+        _ ->
+            m
+
+
+updateAssignmentGrade : Int -> Maybe Grade345 -> Module -> Module
+updateAssignmentGrade assignmentIndex grade m =
+    case m.assignments of
+        AverageGrade345 assignments ->
+            let
+                newAssignments =
+                    Array.Extra.update assignmentIndex (\a -> { a | grade = grade }) assignments
+            in
+            { m | assignments = AverageGrade345 newAssignments }
+
+        _ ->
+            m
 
 
 
----
+---- VIEW ----
 
 
-initModuleParts : List String -> Array.Array ModulePart
-initModuleParts names =
-    Array.fromList <| List.map initPart names
+grade345ToWord : Grade345 -> String
+grade345ToWord grade =
+    case grade of
+        Three ->
+            "Three"
+
+        Four ->
+            "Four"
+
+        Five ->
+            "Five"
 
 
-type alias Model =
-    Array.Array Module
+viewPointLadder : ( Grade345, List ( Grade345, List ( Int, Input.OptionState ) ) ) -> Element Msg
+viewPointLadder ( grade, pl ) =
+    row [ spacing 10 ] <|
+        List.map (viewPointLadderHelper grade) pl
 
 
-type ButtonPosition
-    = First
+viewPointLadderHelper : Grade345 -> ( Grade345, List ( Int, Input.OptionState ) ) -> Element Msg
+viewPointLadderHelper g ( grade, points ) =
+    let
+        weight =
+            if g == grade then
+                Font.bold
+
+            else
+                Font.regular
+
+        bgColor state =
+            Background.color <|
+                if state == Input.Selected then
+                    color.blue
+
+                else
+                    color.white
+    in
+    column [ spacing 10 ]
+        [ el [ centerX, Font.size 12, weight ] <| text <| grade345ToWord grade
+        , row [] <|
+            List.map
+                (\( position, ( point, state ) ) ->
+                    column [ Font.size 12, spacing 6 ]
+                        [ el [ centerX, width (px 14), height (px 8), borders 1 position, corners 3 position, Border.color color.gray, bgColor state ] <| none
+                        , el [ centerX ] <| text <| String.fromInt point
+                        ]
+                )
+                (positions points)
+        ]
+
+
+pointLadder : Int -> Int -> Int -> Int -> ( Grade345, List ( Grade345, List ( Int, Input.OptionState ) ) )
+pointLadder points four five max =
+    ( pointsToGrade345 points four five
+    , [ ( Three, 0, four - 1 )
+      , ( Four, four, five - 1 )
+      , ( Five, five, max )
+      ]
+        |> List.map (\( grade, start, end ) -> ( grade, List.range start end ))
+        |> List.map
+            (Tuple.mapSecond
+                (List.map
+                    (\x ->
+                        ( x
+                        , if points >= x then
+                            Input.Selected
+
+                          else
+                            Input.Idle
+                        )
+                    )
+                )
+            )
+    )
+
+
+viewModuleGrade345 : Maybe { grade : Grade345, average : Float } -> Element Msg
+viewModuleGrade345 grade =
+    grade
+        |> Maybe.map (\g -> grade345ToString (Just g.grade) ++ " (average " ++ Round.round 2 g.average ++ ")" |> text)
+        |> Maybe.withDefault (text "No grade")
+
+
+viewFinalGrade : Model -> Element Msg
+viewFinalGrade model =
+    let
+        fg =
+            finalGrade model
+
+        txt =
+            ( fg.finalGrade, fg.weightedGrades )
+                |> Tuple.Extra.sequenceMaybe
+                |> Maybe.map
+                    (\( fgrade, wgrades ) ->
+                        String.fromInt (round fgrade)
+                            ++ "   ("
+                            ++ String.fromInt wgrades
+                            ++ " / "
+                            ++ String.fromInt fg.credits
+                            ++ "  ≈  "
+                            ++ Round.round 2 fgrade
+                            ++ ")"
+                    )
+                |> Maybe.withDefault "No grade"
+    in
+    row [] [ el [ Font.bold ] <| text "Final grade   ", text txt ]
+
+
+type Position
+    = Single
+    | First
     | Middle
     | Last
 
 
-type Msg
-    = SetModuleGrade Int Grade
-    | SetPartGrade Int Int Grade
+color =
+    { blue = rgb255 0x72 0x9F 0xCF
+    , red = rgb255 255 0 0
+    , green = rgb255 0 128 0
+    , black = rgb255 0 0 0
+    , gray = rgb255 0x7F 0x7F 0x7F
+    , darkCharcoal = rgb255 0x2E 0x34 0x36
+    , lightBlue = rgb255 0xC5 0xE8 0xF7
+    , lightGrey = rgb255 0xE0 0xE0 0xE0
+    , white = rgb255 0xFF 0xFF 0xFF
+    }
 
 
-viewFinalGrade : Array.Array { a | credits : Int, grades : Grades } -> Element Msg
-viewFinalGrade model =
-    finalGrade model
-        |> Maybe.map
-            (\( totalWeight, sum ) ->
-                let
-                    avgGrade =
-                        toFloat sum / toFloat totalWeight
-                in
-                paragraph [ Font.alignLeft ]
-                    [ el [ Font.bold ] <| text "Final grade "
-                    , text <| " = "
-                    , el [ Font.bold ] <| text <| String.fromInt (round avgGrade)
-                    , text <| " (" ++ String.fromInt sum
-                    , text <|
-                        "/"
-                            ++ String.fromInt totalWeight
-                            ++ " ≈ "
-                            ++ Round.round 2 avgGrade
-                            ++ ")"
-                    ]
-            )
-        |> Maybe.withDefault (paragraph [ Font.alignLeft, Font.bold ] [ text "No final grade" ])
+borders : Int -> Position -> Attribute msg
+borders width position =
+    Border.widthEach <|
+        case position of
+            Single ->
+                { left = width
+                , right = width
+                , top = width
+                , bottom = width
+                }
+
+            First ->
+                { left = width
+                , right = width
+                , top = width
+                , bottom = width
+                }
+
+            Middle ->
+                { left = 0
+                , right = width
+                , top = width
+                , bottom = width
+                }
+
+            Last ->
+                { left = 0
+                , right = width
+                , top = width
+                , bottom = width
+                }
 
 
-averageGradeToString : Maybe Float -> String
-averageGradeToString avg =
-    avg |> Maybe.map (\grade -> String.fromInt (round grade) ++ " (" ++ Round.round 2 grade ++ ")") |> Maybe.withDefault "No Grade"
+corners : Int -> Position -> Attribute msg
+corners radius position =
+    Border.roundEach <|
+        case position of
+            Single ->
+                { topLeft = radius
+                , bottomLeft = radius
+                , topRight = radius
+                , bottomRight = radius
+                }
+
+            First ->
+                { topLeft = radius
+                , bottomLeft = radius
+                , topRight = 0
+                , bottomRight = 0
+                }
+
+            Middle ->
+                { topLeft = 0
+                , bottomLeft = 0
+                , topRight = 0
+                , bottomRight = 0
+                }
+
+            Last ->
+                { topLeft = 0
+                , bottomLeft = 0
+                , topRight = radius
+                , bottomRight = radius
+                }
 
 
-view : Model -> Html Msg
-view model =
-    layout [ padding 20 ] <|
-        column [ spacing 20, Font.size 12 ]
-            [ modulesTable model
-            , viewFinalGrade model
-            ]
-
-
-type GradeIndex
-    = ModuleIndex Int
-    | ModuleAndPartIndex Int Int
-
-
-getSingleGrade : Grades -> Maybe Grade
-getSingleGrade grade =
-    case grade of
-        SingleGrade g ->
-            Just g
-
-        Grades _ ->
-            Nothing
-
-
-getGrades : Grades -> Maybe (Array.Array ModulePart)
-getGrades grades =
-    case grades of
-        Grades gs ->
-            Just gs
-
-        SingleGrade _ ->
-            Nothing
-
-
-gradeButtons : GradeIndex -> Array.Array Module -> Element Msg
-gradeButtons gradeIndex modules =
-    let
-        option : Grade -> ButtonPosition -> Input.Option Grade msg
-        option g position =
-            Input.optionWith g (gradeButton g position (gradeToString g))
-
-        grade : Maybe Grade
-        grade =
-            case gradeIndex of
-                ModuleIndex i ->
-                    Maybe.map .grades (Array.get i modules)
-                        |> Maybe.andThen getSingleGrade
-
-                ModuleAndPartIndex m p ->
-                    Array.get m modules
-                        |> Maybe.map .grades
-                        |> Maybe.andThen getGrades
-                        |> Maybe.andThen (Array.get p)
-                        |> Maybe.map .grade
-
-        msg =
-            case gradeIndex of
-                ModuleIndex moduleIndex ->
-                    SetModuleGrade moduleIndex
-
-                ModuleAndPartIndex moduleIndex partIndex ->
-                    SetPartGrade moduleIndex partIndex
-    in
-    Input.radioRow
-        [ Border.rounded 6
-        ]
-        { onChange = msg
-        , selected = grade
-        , label =
-            Input.labelHidden "Select grade"
-        , options =
-            [ option Fail First
-            , option Three Middle
-            , option Four Middle
-            , option Five Last
-            ]
-        }
-
-
-gradeButton : Grade -> ButtonPosition -> String -> Input.OptionState -> Element msg
-gradeButton grade position label state =
-    let
-        r =
-            4
-
-        b =
-            1
-
-        borders =
-            case position of
-                First ->
-                    { left = b, right = b, top = b, bottom = b }
-
-                Middle ->
-                    { left = 0, right = b, top = b, bottom = b }
-
-                Last ->
-                    { left = 0, right = b, top = b, bottom = b }
-
-        corners =
-            case position of
-                First ->
-                    { topLeft = r, bottomLeft = r, topRight = 0, bottomRight = 0 }
-
-                Middle ->
-                    { topLeft = 0, bottomLeft = 0, topRight = 0, bottomRight = 0 }
-
-                Last ->
-                    { topLeft = 0, bottomLeft = 0, topRight = r, bottomRight = r }
-    in
+button : Position -> Color -> String -> Input.OptionState -> Element Msg
+button position c label state =
     el
         [ paddingEach { left = 6, right = 6, top = 3, bottom = 3 }
         , Font.size 12
-        , Border.roundEach corners
-        , Border.widthEach borders
+        , corners 4 position
+        , borders 1 position
         , Border.color color.gray
         , Background.color <|
             if state == Input.Selected then
-                case grade of
-                    Fail ->
-                        color.red
+                if label == "F" then
+                    color.red
 
-                    _ ->
-                        color.green
+                else
+                    c
 
             else
                 color.white
@@ -454,283 +717,478 @@ gradeButton grade position label state =
             text label
 
 
-{-| TODO: Add module : Int and part : Int fields to the Single and Part records
-and module : Int to the Header record in order to
-index into the model grades array.
--}
-type Row
-    = Header { code : String, credits : Int, name : String, moduleIndex : Int }
-    | Single { code : String, credits : Int, name : String, moduleIndex : Int }
-    | Part { name : String, moduleIndex : Int, partIndex : Int }
-    | Sum
+grade345ToString : Maybe Grade345 -> String
+grade345ToString grade =
+    grade
+        |> Maybe.map (grade345ToInt >> String.fromInt)
+        |> Maybe.withDefault "F"
 
 
-getNameAndGrade : Int -> Array.Array ModulePart -> ( String, Grade )
-getNameAndGrade index parts =
-    case Array.get index parts of
-        Nothing ->
-            ( "Unknown", Three )
-
-        Just part ->
-            ( part.name, part.grade )
+grade345ToStringOrNoGrade : Maybe Grade345 -> String
+grade345ToStringOrNoGrade grade =
+    grade
+        |> Maybe.map (grade345ToInt >> String.fromInt)
+        |> Maybe.withDefault "No grade"
 
 
-
--- NOTE: Using Array map (or indexedMap) there is no need to deal with Maybe
--- values when accessing the elements of the array.
-
-
-moduleToRows : Int -> Module -> List Row
-moduleToRows moduleIndex m =
-    case m.grades of
-        SingleGrade _ ->
-            [ Single { code = m.code, credits = m.credits, name = m.name, moduleIndex = moduleIndex } ]
-
-        Grades grades ->
-            Header { code = m.code, credits = m.credits, name = m.name, moduleIndex = moduleIndex }
-                :: Array.Extra.indexedMapToList
-                    (\i part ->
-                        Part { name = part.name, moduleIndex = moduleIndex, partIndex = i }
-                    )
-                    grades
+viewPointsModuleGrade : Maybe Grade345 -> Int -> Int -> String
+viewPointsModuleGrade grade points max =
+    grade
+        |> Maybe.map (grade345ToInt >> String.fromInt)
+        |> Maybe.map
+            (\s ->
+                s
+                    ++ " ("
+                    ++ String.fromInt points
+                    ++ " of "
+                    ++ String.fromInt max
+                    ++ " points)"
+            )
+        |> Maybe.withDefault "No grade"
 
 
-modulesToRows : Array.Array Module -> List Row
-modulesToRows ms =
-    (Array.Extra.indexedMapToList
-        (\index mod -> moduleToRows index mod)
-        ms
+positions : List a -> List ( Position, a )
+positions list =
+    let
+        n =
+            List.length list
+
+        indexToPostion i =
+            if i == 0 then
+                if n == 1 then
+                    Single
+
+                else
+                    First
+
+            else if i == (n - 1) then
+                Last
+
+            else
+                Middle
+    in
+    list
+        |> List.indexedMap (\i x -> ( indexToPostion i, x ))
+
+
+mkOptions : List a -> (a -> String) -> Color -> List (Input.Option a Msg)
+mkOptions values valueToString c =
+    values
+        |> positions
+        |> List.map (mkOption valueToString c)
+
+
+mkOption : (a -> String) -> Color -> ( Position, a ) -> Input.Option a Msg
+mkOption valueToString c ( position, value ) =
+    Input.optionWith value <| button position c (valueToString value)
+
+
+grade345Buttons : Maybe Grade345 -> (Maybe Grade345 -> Msg) -> Element Msg
+grade345Buttons selected msg =
+    Input.radioRow []
+        { onChange = msg
+        , selected = Just selected
+        , label = Input.labelHidden "Select grade"
+        , options = mkOptions [ Nothing, Just Three, Just Four, Just Five ] grade345ToString color.green
+        }
+
+
+boolToFailPass : Bool -> String
+boolToFailPass bool =
+    if bool then
+        "P"
+
+    else
+        "F"
+
+
+mandatoryPassButtons : Int -> Int -> Bool -> Element Msg
+mandatoryPassButtons moduleIndex assignmentIndex selected =
+    Input.radioRow []
+        { onChange = SetMandatoryPass moduleIndex assignmentIndex
+        , selected = Just selected
+        , label = Input.labelHidden "Select mandaatory fail or pass"
+        , options = mkOptions [ False, True ] boolToFailPass color.green
+        }
+
+
+higherGradePointsButtons : Int -> Int -> Int -> Int -> Element Msg
+higherGradePointsButtons moduleIndex assignmentIndex points selected =
+    Input.radioRow []
+        { onChange = SetHigherGradePoints moduleIndex assignmentIndex
+        , selected = Just selected
+        , label = Input.labelHidden "Select higher grade points"
+        , options = mkOptions (List.range 0 points) String.fromInt color.blue
+        }
+
+
+type TableRow
+    = AverageModuleRow
+        { code : String
+        , name : String
+        , grade : Maybe { grade : Grade345, average : Float }
+        , credits : Int
+        }
+    | AverageAssignmentRow
+        { name : String
+        , moduleIndex : Int
+        , assignmentIndex : Int
+        , grade : Maybe Grade345
+        }
+    | PointsModuleRow
+        { code : String
+        , name : String
+        , grade : Maybe Grade345
+        , points : Int
+        , four : Int
+        , five : Int
+        , max : Int
+        , credits : Int
+        }
+    | PointsAssignmentRow
+        { name : String
+        , moduleIndex : Int
+        , assignmentIndex : Int
+        , mandatoryPass : Bool
+        , points : Int
+        , max : Int
+        }
+    | SingleGrade345ModuleRow
+        { code : String
+        , name : String
+        , moduleIndex : Int
+        , grade : Maybe Grade345
+        , credits : Int
+        }
+    | SumRow
+        { sumCredits : Int
+        , sumWeightedGrades : Maybe Int
+        }
+
+
+moduleTableRows : Int -> Module -> List TableRow
+moduleTableRows moduleIndex m =
+    case m.assignments of
+        SingleGrade345 grade ->
+            [ SingleGrade345ModuleRow { code = m.code, moduleIndex = moduleIndex, name = m.name, grade = grade, credits = m.credits } ]
+
+        AverageGrade345 assignments ->
+            let
+                grade =
+                    averageGradeHelper assignments
+            in
+            AverageModuleRow { code = m.code, name = m.name, grade = grade, credits = m.credits }
+                :: (assignments
+                        |> Array.toList
+                        |> List.indexedMap
+                            (\assignmentIndex assignment ->
+                                AverageAssignmentRow { name = assignment.name, moduleIndex = moduleIndex, assignmentIndex = assignmentIndex, grade = assignment.grade }
+                            )
+                   )
+
+        Points assignments ->
+            let
+                grade =
+                    pointsGradeHelper assignments
+            in
+            PointsModuleRow { code = m.code, name = m.name, grade = grade.grade, points = grade.points, four = assignments.four, five = assignments.five, max = grade.max, credits = m.credits }
+                :: (assignments.assignments
+                        |> Array.toList
+                        |> List.indexedMap
+                            (\assignmentIndex assignment ->
+                                PointsAssignmentRow { name = assignment.name, moduleIndex = moduleIndex, assignmentIndex = assignmentIndex, mandatoryPass = assignment.mandatoryPass, points = assignment.points, max = assignment.max }
+                            )
+                   )
+
+
+modelToTableRows : Model -> List TableRow
+modelToTableRows model =
+    let
+        fg1 =
+            finalGrade model
+
+        fg =
+            SumRow { sumCredits = fg1.credits, sumWeightedGrades = fg1.weightedGrades }
+    in
+    Array.indexedMap (\moduleIndex m -> moduleTableRows moduleIndex m) model
+        |> Array.toList
         |> List.concat
-    )
-        ++ [ Sum ]
+        |> (\rows -> List.append rows [ fg ])
 
 
-cell : Attribute msg -> Element msg -> Element msg
-cell alignment content =
-    el [ alignment, centerY, paddingXY 20 10 ] content
+exampleTableRows : List TableRow
+exampleTableRows =
+    [ AverageModuleRow
+        { code = "2000"
+        , name = "Assignments (part 1)"
+        , grade = Just { grade = Four, average = 4.56 }
+        , credits = 2
+        }
+    , AverageAssignmentRow
+        { name = "Fundamental concepts"
+        , moduleIndex = 0
+        , assignmentIndex = 0
+        , grade = Just Four
+        }
+    , PointsModuleRow
+        { code = "2000"
+        , name = "Assignments (part 1)"
+        , grade = Just Three
+        , points = 7
+        , four = 6
+        , five = 8
+        , max = 10
+        , credits = 2
+        }
+    , PointsAssignmentRow
+        { name = "Fundamental Concepts"
+        , moduleIndex = 1
+        , assignmentIndex = 0
+        , mandatoryPass = True
+        , points = 2
+        , max = 4
+        }
+    , SingleGrade345ModuleRow
+        { code = "3000"
+        , name = "Written exam (part 1)"
+        , moduleIndex = 2
+        , grade = Just Five
+        , credits = 1
+        }
+    ]
 
 
-tableCell : List (Attribute msg) -> Element msg -> Element msg
-tableCell attributes child =
-    el
-        [ height fill
-        , paddingXY 20 6
-        ]
-    <|
-        el (attributes ++ [ alignTop ]) child
-
-
-sumCell : List (Attribute msg) -> Element msg -> Element msg
-sumCell attributes child =
-    el
-        [ height fill
-        , Border.widthEach { top = 2, bottom = 0, left = 0, right = 0 }
-        , paddingXY 0 10
-        , centerX
-        ]
-    <|
-        el (attributes ++ [ alignBottom ]) child
-
-
-codeColumn : Row -> Element msg
 codeColumn row =
     case row of
-        Single record ->
-            .code record |> text |> tableCell [ centerX ]
+        AverageModuleRow r ->
+            cell [] <| text r.code
 
-        Header record ->
-            .code record |> text |> tableCell [ centerX ]
+        PointsModuleRow r ->
+            cell [] <| text r.code
 
-        Part _ ->
+        SingleGrade345ModuleRow r ->
+            cell [] <| text r.code
+
+        SumRow _ ->
+            cell [ topBorder ] none
+
+        _ ->
             none
 
-        Sum ->
-            sumCell [] none
+
+moduleRowPadding =
+    paddingEach { top = 10, bottom = 30, left = 10, right = 0 }
 
 
-weightColumn : Array.Array Module -> Row -> Element msg
-weightColumn modules row =
+nameColumn row =
     case row of
-        Single record ->
-            .credits record |> String.fromInt |> text |> tableCell [ centerX ]
+        AverageModuleRow r ->
+            cell [ moduleRowPadding ] <| paragraph [] [ text r.name ]
 
-        Header record ->
-            .credits record |> String.fromInt |> text |> tableCell [ centerX ]
+        AverageAssignmentRow r ->
+            cell [] <| paragraph [] [ text r.name ]
 
-        Part _ ->
+        PointsModuleRow r ->
+            cell [] <| paragraph [] [ text r.name ]
+
+        PointsAssignmentRow r ->
+            cell [] <| paragraph [] [ text r.name ]
+
+        SingleGrade345ModuleRow r ->
+            cell [] <| paragraph [] [ text r.name ]
+
+        SumRow _ ->
+            cell [ topBorder, height fill ] none
+
+
+gradeColumn row =
+    case row of
+        AverageModuleRow r ->
+            cell [] <| viewModuleGrade345 r.grade
+
+        AverageAssignmentRow r ->
+            cell [] <| grade345Buttons r.grade (SetAverageGrade345 r.moduleIndex r.assignmentIndex)
+
+        PointsModuleRow r ->
+            cell [] <| text <| viewPointsModuleGrade r.grade r.points r.max
+
+        PointsAssignmentRow r ->
+            cell [] <| mandatoryPassButtons r.moduleIndex r.assignmentIndex r.mandatoryPass
+
+        SingleGrade345ModuleRow r ->
+            cell [] <| grade345Buttons r.grade (SetSinglGrade345 r.moduleIndex)
+
+        SumRow _ ->
+            cell [ topBorder ] none
+
+
+pointsColumn row =
+    case row of
+        PointsModuleRow r ->
+            cell [] <|
+                viewPointLadder <|
+                    pointLadder r.points r.four r.five r.max
+
+        PointsAssignmentRow r ->
+            cell [] <| higherGradePointsButtons r.moduleIndex r.assignmentIndex r.max r.points
+
+        SumRow _ ->
+            cell [ topBorder, Font.alignRight, Font.bold ] <| text "Sum"
+
+        _ ->
             none
 
-        Sum ->
-            let
-                totalWeight =
-                    Array.foldl (\m sumW -> m.credits + sumW) 0 modules
-            in
-            sumCell [ centerX ] <| text <| String.fromInt <| totalWeight
+
+centeredCell child =
+    cell [ Font.center ] child
 
 
-type alias PaddingEach =
-    { left : Int
-    , right : Int
-    , top : Int
-    , bottom : Int
-    }
+newWeightColumn row =
+    case row of
+        AverageModuleRow r ->
+            centeredCell <| text <| String.fromInt r.credits
 
+        PointsModuleRow r ->
+            centeredCell <| text <| String.fromInt r.credits
 
-zeroPadding : PaddingEach
-zeroPadding =
-    { left = 0, right = 0, top = 0, bottom = 0 }
+        SingleGrade345ModuleRow r ->
+            centeredCell <| text <| String.fromInt r.credits
 
+        SumRow r ->
+            cell [ topBorder ] <| el [ centerX ] <| text <| String.fromInt r.sumCredits
 
-nameColumn : Row -> Element msg
-nameColumn r =
-    case r of
-        Single record ->
-            .name record |> text |> tableCell []
-
-        Header record ->
-            paragraph [ Font.alignLeft ] [ .name record |> text ] |> tableCell []
-
-        Part record ->
-            row []
-                [ el [ width (px 20) ] none
-                , paragraph [ Font.alignLeft ] [ .name record |> text ]
-                ]
-                |> tableCell []
-
-        Sum ->
-            sumCell [] none
-
-
-gradeColumn : Array.Array Module -> Row -> Element Msg
-gradeColumn modules r =
-    case r of
-        Single mod ->
-            tableCell [ centerX ] <| gradeButtons (ModuleIndex mod.moduleIndex) modules
-
-        Header h ->
-            tableCell [ centerX ] <| viewAverageModuleGrade h.moduleIndex modules
-
-        Part part ->
-            tableCell [ centerX ] <| gradeButtons (ModuleAndPartIndex part.moduleIndex part.partIndex) modules
-
-        Sum ->
-            sumCell [ Font.bold, alignRight ] <| text "Sum"
-
-
-weightedColumn : Array.Array Module -> Row -> Element Msg
-weightedColumn modules w =
-    case w of
-        Single s ->
-            tableCell [ centerX ] <| viewModuleAverageWeightedGrade s.moduleIndex modules
-
-        Header h ->
-            tableCell [ centerX ] <| viewModuleAverageWeightedGrade h.moduleIndex modules
-
-        Part _ ->
+        _ ->
             none
 
-        Sum ->
-            let
-                sum =
-                    finalGrade modules
-                        |> Maybe.map (\( _, s ) -> String.fromInt s)
-                        |> Maybe.withDefault "Incomplete"
-            in
-            sumCell [ centerX ] <| text sum
+
+weightedGrade : Maybe Grade345 -> Int -> String
+weightedGrade grade credits =
+    grade
+        |> Maybe.map
+            (\g ->
+                g
+                    |> grade345ToInt
+                    |> (*) credits
+                    |> String.fromInt
+            )
+        |> Maybe.withDefault "No grade"
 
 
-modulesTable : Array.Array Module -> Element Msg
-modulesTable modules =
-    let
-        headerCell : List (Attribute msg) -> Element msg -> Element msg
-        headerCell attributes child =
-            -- Same row height for all table columns using elm-ui
-            -- https://stackoverflow.com/questions/69364693/same-row-height-for-all-table-columns-using-elm-ui
-            el
-                [ height fill
-                , Font.bold
-                , Border.widthEach { top = 0, bottom = 2, left = 0, right = 0 }
-                , paddingXY 20 6
-                ]
-            <|
-                el (attributes ++ [ alignBottom ]) child
+weightedGradeColumn row =
+    case row of
+        AverageModuleRow r ->
+            centeredCell <|
+                text
+                    (r.grade
+                        |> Maybe.map (\g -> grade345ToInt g.grade * r.credits |> String.fromInt)
+                        |> Maybe.withDefault "No grade"
+                    )
 
-        centeredStrings strings =
-            List.intersperse (html <| br [] []) (List.map text strings) |> paragraph []
-    in
-    table []
-        { data = modulesToRows modules
+        PointsModuleRow r ->
+            centeredCell <| text <| weightedGrade r.grade r.credits
+
+        SingleGrade345ModuleRow r ->
+            centeredCell <| text <| weightedGrade r.grade r.credits
+
+        SumRow r ->
+            cell [ topBorder ] <| el [ centerX ] <| text <| Maybe.withDefault "Incomplete" <| Maybe.map String.fromInt <| r.sumWeightedGrades
+
+        _ ->
+            none
+
+
+viewTable model =
+    modelToTableRows model |> viewTableRows
+
+
+viewTableRows rows =
+    table [ width (px 1000) ]
+        { data = rows
         , columns =
-            [ { header = headerCell [ centerX ] <| text "Code"
-              , width = shrink
+            [ { header = header "Code"
+              , width = px 100
               , view = codeColumn
               }
-            , { header = headerCell [] <| text "Ladok module"
+            , { header = header "Ladok module"
               , width = fill
               , view = nameColumn
               }
-            , { header = headerCell [ centerX ] <| text "Grade"
-              , width = shrink
-              , view = gradeColumn modules
+            , { header = header "Grade"
+              , width = fill |> maximum 100
+              , view = gradeColumn
               }
-            , { header = headerCell [ Font.center ] <| centeredStrings [ "Weight", "(credits)" ]
-              , width = shrink
-              , view = weightColumn modules
+            , { header = header "Points"
+              , width = fill |> maximum 100
+              , view = pointsColumn
               }
-            , { header = headerCell [ Font.center ] <| centeredStrings [ "Weighted", "grade" ]
-              , width = shrink
-              , view = weightedColumn modules
+            , { header = centeredHeader "Weight\n(credits)"
+              , width = px 100
+              , view = newWeightColumn
+              }
+            , { header = centeredHeader "Weigted\ngrade"
+              , width = px 100
+              , view = weightedGradeColumn
               }
             ]
         }
 
 
-update : Msg -> Model -> Model
-update msg model =
-    case msg of
-        SetModuleGrade moduleIndex grade ->
-            Array.Extra.update moduleIndex
-                (\mod -> { mod | grades = SingleGrade grade })
-                model
+noBorders =
+    { bottom = 0, left = 0, right = 0, top = 0 }
 
-        SetPartGrade moduleIndex partIndex grade ->
-            Array.Extra.update moduleIndex
-                (\mod ->
-                    case mod.grades of
-                        SingleGrade _ ->
-                            mod
 
-                        Grades grades ->
-                            { mod
-                                | grades =
-                                    Grades
-                                        (Array.Extra.update
-                                            partIndex
-                                            (\part -> { part | grade = grade })
-                                            grades
-                                        )
-                            }
-                )
-                model
+topBorder =
+    Border.widthEach { noBorders | top = 2 }
+
+
+bottomBorder =
+    Border.widthEach { noBorders | bottom = 2 }
+
+
+cell : List (Attribute msg) -> Element msg -> Element msg
+cell attrs child =
+    el (padding 10 :: attrs) child
+
+
+header txt =
+    cell [ bottomBorder, Font.bold, height fill ] <| el [ alignBottom ] <| text txt
+
+
+centeredHeader txt =
+    cell [ bottomBorder, Font.bold, height fill ] <| el [ centerX, alignBottom, Font.center ] <| text txt
+
+
+view : Model -> Html Msg
+view model =
+    layout [ padding 20 ] <|
+        column [ spacing 20 ]
+            [ viewTable model
+            , viewFinalGrade model
+            ]
+
+
+
+---- PROGRAM ----
 
 
 main : Program () Model Msg
 main =
-    Browser.sandbox
-        { init = dspModules -- osppModules
-        , view = view
+    Browser.element
+        { view = view
+        , init = \_ -> init
         , update = update
+        , subscriptions = always Sub.none
         }
 
 
-color =
-    { blue = rgb255 0x72 0x9F 0xCF
-    , red = rgb255 255 0 0
-    , green = rgb255 0 128 0
-    , black = rgb255 0 0 0
-    , gray = rgb255 0x7F 0x7F 0x7F
-    , darkCharcoal = rgb255 0x2E 0x34 0x36
-    , lightBlue = rgb255 0xC5 0xE8 0xF7
-    , lightGrey = rgb255 0xE0 0xE0 0xE0
-    , white = rgb255 0xFF 0xFF 0xFF
-    }
+type alias FooRecord =
+    { foo : Int }
+
+
+type alias BarRecord =
+    { bar : Maybe Int }
+
+
+type FooBar
+    = Foo FooRecord
+    | Bar BarRecord
