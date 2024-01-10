@@ -728,6 +728,22 @@ thresholdsV2 rec =
         ]
 
 
+htmlTable : Model -> Html Msg
+htmlTable model =
+    Html.table []
+        [ Html.tr []
+            [ Html.td [] [ Html.text "one" ]
+            , Html.td [] [ Html.text "two" ]
+            , Html.td [] [ Html.text "three" ]
+            ]
+        , Html.tr []
+            [ Html.td [] [ Html.text "one" ]
+            , Html.td [] [ layoutWith { options = [ noStaticStyleSheet ] } [] <| row [] [ el [] <| gradeButtons (ModuleIndex 2) model ] ]
+            , Html.td [] [ Html.text "three" ]
+            ]
+        ]
+
+
 view : Model -> Html Msg
 view model =
     layout [ padding 20 ] <|
@@ -737,6 +753,7 @@ view model =
 
             -- , thresholds 6 8 10 4
             -- , thresholdsV2 6 8 10 7 4
+            , html <| htmlTable model
             ]
 
 
