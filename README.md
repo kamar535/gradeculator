@@ -20,18 +20,17 @@ calculated as a weighted average of all the Ladok modules with grade scale Fail,
 <img src="images/ospp-example.png" width="700px"/>
 </p>
 
-The Assignments (part 1) module consists of three graded assignmetns and the grade
-for this module is the average of the grades for these three assignments. In
-this example (3 + 3 + 3)/3 ≈ 3.00 = 3.
+The Assignments (part 1) module consists of three graded assignments. Each
+assignments has a mandatory part and a higher grade part with points. The total sum of these points is 10. For grade 4 you must score at least 4 points and for grade 5 you must score at least 8 points. 
 
-Each of the reminding moudles only has a single graded artifact. 
+Each of the reminding modules only has a single graded artifact. 
 
 The final grade is calculated as follows: 
-(2\*3 + 1\*3 + 1\*3 + 2\*3 + 5\*3) / (2 + 1 + 1 + 5 + 2) =
-33/11 ≈ 3.00 ≈ 3.
+(2\*4 + 1\*3 + 1\*4 + 2\*3 + 5\*5) / (2 + 1 + 1 + 5 + 2) =
+46/11 ≈ 4.18 ≈ 4.
 
-If one or more of the graded artifacts has the grade **Fail**, no final grade can be
-calculated shown in the below example. 
+If one or more of the graded artifacts has the grade **Fail** (F), no final grade can be
+calculated as shown in the below example. 
 
 <p align="center"r>
 <img src="images/ospp-no-grade-example.png" width="700">

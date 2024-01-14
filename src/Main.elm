@@ -314,11 +314,35 @@ assignmentsPart1Points =
     }
 
 
+dspAssignments : Module
+dspAssignments =
+    { code = "2010"
+    , name = "Assignments"
+    , credits = 5
+    , assignments =
+        higherGradeAssignments 4
+            8
+            [ ( "Fundamental concepts", 3 )
+            , ( "The process concept", 3 )
+            , ( "Threads, synchronization and deadlock", 4 )
+            ]
+    }
+
+
 writtenExam : Module
 writtenExam =
     { code = "3000"
     , name = "Written exam (part 1)"
     , credits = 1
+    , assignments = singleGrade345
+    }
+
+
+dspWrittenExam : Module
+dspWrittenExam =
+    { code = "1010"
+    , name = "Written exam"
+    , credits = 2
     , assignments = singleGrade345
     }
 
@@ -341,9 +365,27 @@ projectGroup =
     }
 
 
+dspProjectGroup : Module
+dspProjectGroup =
+    { code = "3020"
+    , name = "Project (group)"
+    , credits = 2
+    , assignments = singleGrade345
+    }
+
+
 projectIndividual : Module
 projectIndividual =
     { code = "7000"
+    , name = "Project (individual)"
+    , credits = 5
+    , assignments = singleGrade345
+    }
+
+
+dspProjectIndividual : Module
+dspProjectIndividual =
+    { code = "3010"
     , name = "Project (individual)"
     , credits = 5
     , assignments = singleGrade345
@@ -373,9 +415,19 @@ osppModel =
         ]
 
 
+dspModel : Model
+dspModel =
+    Array.fromList
+        [ dspWrittenExam
+        , dspAssignments
+        , dspProjectIndividual
+        , dspProjectGroup
+        ]
+
+
 init : ( Model, Cmd Msg )
 init =
-    ( osppModel, Cmd.none )
+    ( dspModel, Cmd.none )
 
 
 getModuleGrade345 : Module -> Maybe Grade345
@@ -1102,11 +1154,11 @@ viewTable model =
 
 
 viewTableRows rows =
-    table [ width (px 1000) ]
+    table [ width (px 800) ]
         { data = rows
         , columns =
             [ { header = header "Code"
-              , width = px 100
+              , width = px 70
               , view = codeColumn
               }
             , { header = header "Ladok module"
@@ -1114,7 +1166,7 @@ viewTableRows rows =
               , view = nameColumn
               }
             , { header = header "Grade"
-              , width = fill |> maximum 100
+              , width = px 150
               , view = gradeColumn
               }
             , { header = header "Points"
@@ -1160,8 +1212,8 @@ centeredHeader txt =
 
 view : Model -> Html Msg
 view model =
-    layout [ padding 20 ] <|
-        column [ spacing 20 ]
+    layout [ padding 20, Font.size 16 ] <|
+        column [ spacing 20, width (px 400) ]
             [ viewTable model
             , viewFinalGrade model
             ]

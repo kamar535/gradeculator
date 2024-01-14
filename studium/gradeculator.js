@@ -80,6 +80,271 @@ function A9(fun, a, b, c, d, e, f, g, h, i) {
 console.warn('Compiled in DEV mode. Follow the advice at https://elm-lang.org/0.19.1/optimize for better performance and smaller assets.');
 
 
+// EQUALITY
+
+function _Utils_eq(x, y)
+{
+	for (
+		var pair, stack = [], isEqual = _Utils_eqHelp(x, y, 0, stack);
+		isEqual && (pair = stack.pop());
+		isEqual = _Utils_eqHelp(pair.a, pair.b, 0, stack)
+		)
+	{}
+
+	return isEqual;
+}
+
+function _Utils_eqHelp(x, y, depth, stack)
+{
+	if (x === y)
+	{
+		return true;
+	}
+
+	if (typeof x !== 'object' || x === null || y === null)
+	{
+		typeof x === 'function' && _Debug_crash(5);
+		return false;
+	}
+
+	if (depth > 100)
+	{
+		stack.push(_Utils_Tuple2(x,y));
+		return true;
+	}
+
+	/**/
+	if (x.$ === 'Set_elm_builtin')
+	{
+		x = $elm$core$Set$toList(x);
+		y = $elm$core$Set$toList(y);
+	}
+	if (x.$ === 'RBNode_elm_builtin' || x.$ === 'RBEmpty_elm_builtin')
+	{
+		x = $elm$core$Dict$toList(x);
+		y = $elm$core$Dict$toList(y);
+	}
+	//*/
+
+	/**_UNUSED/
+	if (x.$ < 0)
+	{
+		x = $elm$core$Dict$toList(x);
+		y = $elm$core$Dict$toList(y);
+	}
+	//*/
+
+	for (var key in x)
+	{
+		if (!_Utils_eqHelp(x[key], y[key], depth + 1, stack))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+var _Utils_equal = F2(_Utils_eq);
+var _Utils_notEqual = F2(function(a, b) { return !_Utils_eq(a,b); });
+
+
+
+// COMPARISONS
+
+// Code in Generate/JavaScript.hs, Basics.js, and List.js depends on
+// the particular integer values assigned to LT, EQ, and GT.
+
+function _Utils_cmp(x, y, ord)
+{
+	if (typeof x !== 'object')
+	{
+		return x === y ? /*EQ*/ 0 : x < y ? /*LT*/ -1 : /*GT*/ 1;
+	}
+
+	/**/
+	if (x instanceof String)
+	{
+		var a = x.valueOf();
+		var b = y.valueOf();
+		return a === b ? 0 : a < b ? -1 : 1;
+	}
+	//*/
+
+	/**_UNUSED/
+	if (typeof x.$ === 'undefined')
+	//*/
+	/**/
+	if (x.$[0] === '#')
+	//*/
+	{
+		return (ord = _Utils_cmp(x.a, y.a))
+			? ord
+			: (ord = _Utils_cmp(x.b, y.b))
+				? ord
+				: _Utils_cmp(x.c, y.c);
+	}
+
+	// traverse conses until end of a list or a mismatch
+	for (; x.b && y.b && !(ord = _Utils_cmp(x.a, y.a)); x = x.b, y = y.b) {} // WHILE_CONSES
+	return ord || (x.b ? /*GT*/ 1 : y.b ? /*LT*/ -1 : /*EQ*/ 0);
+}
+
+var _Utils_lt = F2(function(a, b) { return _Utils_cmp(a, b) < 0; });
+var _Utils_le = F2(function(a, b) { return _Utils_cmp(a, b) < 1; });
+var _Utils_gt = F2(function(a, b) { return _Utils_cmp(a, b) > 0; });
+var _Utils_ge = F2(function(a, b) { return _Utils_cmp(a, b) >= 0; });
+
+var _Utils_compare = F2(function(x, y)
+{
+	var n = _Utils_cmp(x, y);
+	return n < 0 ? $elm$core$Basics$LT : n ? $elm$core$Basics$GT : $elm$core$Basics$EQ;
+});
+
+
+// COMMON VALUES
+
+var _Utils_Tuple0_UNUSED = 0;
+var _Utils_Tuple0 = { $: '#0' };
+
+function _Utils_Tuple2_UNUSED(a, b) { return { a: a, b: b }; }
+function _Utils_Tuple2(a, b) { return { $: '#2', a: a, b: b }; }
+
+function _Utils_Tuple3_UNUSED(a, b, c) { return { a: a, b: b, c: c }; }
+function _Utils_Tuple3(a, b, c) { return { $: '#3', a: a, b: b, c: c }; }
+
+function _Utils_chr_UNUSED(c) { return c; }
+function _Utils_chr(c) { return new String(c); }
+
+
+// RECORDS
+
+function _Utils_update(oldRecord, updatedFields)
+{
+	var newRecord = {};
+
+	for (var key in oldRecord)
+	{
+		newRecord[key] = oldRecord[key];
+	}
+
+	for (var key in updatedFields)
+	{
+		newRecord[key] = updatedFields[key];
+	}
+
+	return newRecord;
+}
+
+
+// APPEND
+
+var _Utils_append = F2(_Utils_ap);
+
+function _Utils_ap(xs, ys)
+{
+	// append Strings
+	if (typeof xs === 'string')
+	{
+		return xs + ys;
+	}
+
+	// append Lists
+	if (!xs.b)
+	{
+		return ys;
+	}
+	var root = _List_Cons(xs.a, ys);
+	xs = xs.b
+	for (var curr = root; xs.b; xs = xs.b) // WHILE_CONS
+	{
+		curr = curr.b = _List_Cons(xs.a, ys);
+	}
+	return root;
+}
+
+
+
+var _List_Nil_UNUSED = { $: 0 };
+var _List_Nil = { $: '[]' };
+
+function _List_Cons_UNUSED(hd, tl) { return { $: 1, a: hd, b: tl }; }
+function _List_Cons(hd, tl) { return { $: '::', a: hd, b: tl }; }
+
+
+var _List_cons = F2(_List_Cons);
+
+function _List_fromArray(arr)
+{
+	var out = _List_Nil;
+	for (var i = arr.length; i--; )
+	{
+		out = _List_Cons(arr[i], out);
+	}
+	return out;
+}
+
+function _List_toArray(xs)
+{
+	for (var out = []; xs.b; xs = xs.b) // WHILE_CONS
+	{
+		out.push(xs.a);
+	}
+	return out;
+}
+
+var _List_map2 = F3(function(f, xs, ys)
+{
+	for (var arr = []; xs.b && ys.b; xs = xs.b, ys = ys.b) // WHILE_CONSES
+	{
+		arr.push(A2(f, xs.a, ys.a));
+	}
+	return _List_fromArray(arr);
+});
+
+var _List_map3 = F4(function(f, xs, ys, zs)
+{
+	for (var arr = []; xs.b && ys.b && zs.b; xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
+	{
+		arr.push(A3(f, xs.a, ys.a, zs.a));
+	}
+	return _List_fromArray(arr);
+});
+
+var _List_map4 = F5(function(f, ws, xs, ys, zs)
+{
+	for (var arr = []; ws.b && xs.b && ys.b && zs.b; ws = ws.b, xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
+	{
+		arr.push(A4(f, ws.a, xs.a, ys.a, zs.a));
+	}
+	return _List_fromArray(arr);
+});
+
+var _List_map5 = F6(function(f, vs, ws, xs, ys, zs)
+{
+	for (var arr = []; vs.b && ws.b && xs.b && ys.b && zs.b; vs = vs.b, ws = ws.b, xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
+	{
+		arr.push(A5(f, vs.a, ws.a, xs.a, ys.a, zs.a));
+	}
+	return _List_fromArray(arr);
+});
+
+var _List_sortBy = F2(function(f, xs)
+{
+	return _List_fromArray(_List_toArray(xs).sort(function(a, b) {
+		return _Utils_cmp(f(a), f(b));
+	}));
+});
+
+var _List_sortWith = F2(function(f, xs)
+{
+	return _List_fromArray(_List_toArray(xs).sort(function(a, b) {
+		var ord = A2(f, a, b);
+		return ord === $elm$core$Basics$EQ ? 0 : ord === $elm$core$Basics$LT ? -1 : 1;
+	}));
+});
+
+
+
 var _JsArray_empty = [];
 
 function _JsArray_singleton(value)
@@ -525,271 +790,6 @@ function _Debug_regionToString(region)
 	}
 	return 'on lines ' + region.start.line + ' through ' + region.end.line;
 }
-
-
-
-// EQUALITY
-
-function _Utils_eq(x, y)
-{
-	for (
-		var pair, stack = [], isEqual = _Utils_eqHelp(x, y, 0, stack);
-		isEqual && (pair = stack.pop());
-		isEqual = _Utils_eqHelp(pair.a, pair.b, 0, stack)
-		)
-	{}
-
-	return isEqual;
-}
-
-function _Utils_eqHelp(x, y, depth, stack)
-{
-	if (x === y)
-	{
-		return true;
-	}
-
-	if (typeof x !== 'object' || x === null || y === null)
-	{
-		typeof x === 'function' && _Debug_crash(5);
-		return false;
-	}
-
-	if (depth > 100)
-	{
-		stack.push(_Utils_Tuple2(x,y));
-		return true;
-	}
-
-	/**/
-	if (x.$ === 'Set_elm_builtin')
-	{
-		x = $elm$core$Set$toList(x);
-		y = $elm$core$Set$toList(y);
-	}
-	if (x.$ === 'RBNode_elm_builtin' || x.$ === 'RBEmpty_elm_builtin')
-	{
-		x = $elm$core$Dict$toList(x);
-		y = $elm$core$Dict$toList(y);
-	}
-	//*/
-
-	/**_UNUSED/
-	if (x.$ < 0)
-	{
-		x = $elm$core$Dict$toList(x);
-		y = $elm$core$Dict$toList(y);
-	}
-	//*/
-
-	for (var key in x)
-	{
-		if (!_Utils_eqHelp(x[key], y[key], depth + 1, stack))
-		{
-			return false;
-		}
-	}
-	return true;
-}
-
-var _Utils_equal = F2(_Utils_eq);
-var _Utils_notEqual = F2(function(a, b) { return !_Utils_eq(a,b); });
-
-
-
-// COMPARISONS
-
-// Code in Generate/JavaScript.hs, Basics.js, and List.js depends on
-// the particular integer values assigned to LT, EQ, and GT.
-
-function _Utils_cmp(x, y, ord)
-{
-	if (typeof x !== 'object')
-	{
-		return x === y ? /*EQ*/ 0 : x < y ? /*LT*/ -1 : /*GT*/ 1;
-	}
-
-	/**/
-	if (x instanceof String)
-	{
-		var a = x.valueOf();
-		var b = y.valueOf();
-		return a === b ? 0 : a < b ? -1 : 1;
-	}
-	//*/
-
-	/**_UNUSED/
-	if (typeof x.$ === 'undefined')
-	//*/
-	/**/
-	if (x.$[0] === '#')
-	//*/
-	{
-		return (ord = _Utils_cmp(x.a, y.a))
-			? ord
-			: (ord = _Utils_cmp(x.b, y.b))
-				? ord
-				: _Utils_cmp(x.c, y.c);
-	}
-
-	// traverse conses until end of a list or a mismatch
-	for (; x.b && y.b && !(ord = _Utils_cmp(x.a, y.a)); x = x.b, y = y.b) {} // WHILE_CONSES
-	return ord || (x.b ? /*GT*/ 1 : y.b ? /*LT*/ -1 : /*EQ*/ 0);
-}
-
-var _Utils_lt = F2(function(a, b) { return _Utils_cmp(a, b) < 0; });
-var _Utils_le = F2(function(a, b) { return _Utils_cmp(a, b) < 1; });
-var _Utils_gt = F2(function(a, b) { return _Utils_cmp(a, b) > 0; });
-var _Utils_ge = F2(function(a, b) { return _Utils_cmp(a, b) >= 0; });
-
-var _Utils_compare = F2(function(x, y)
-{
-	var n = _Utils_cmp(x, y);
-	return n < 0 ? $elm$core$Basics$LT : n ? $elm$core$Basics$GT : $elm$core$Basics$EQ;
-});
-
-
-// COMMON VALUES
-
-var _Utils_Tuple0_UNUSED = 0;
-var _Utils_Tuple0 = { $: '#0' };
-
-function _Utils_Tuple2_UNUSED(a, b) { return { a: a, b: b }; }
-function _Utils_Tuple2(a, b) { return { $: '#2', a: a, b: b }; }
-
-function _Utils_Tuple3_UNUSED(a, b, c) { return { a: a, b: b, c: c }; }
-function _Utils_Tuple3(a, b, c) { return { $: '#3', a: a, b: b, c: c }; }
-
-function _Utils_chr_UNUSED(c) { return c; }
-function _Utils_chr(c) { return new String(c); }
-
-
-// RECORDS
-
-function _Utils_update(oldRecord, updatedFields)
-{
-	var newRecord = {};
-
-	for (var key in oldRecord)
-	{
-		newRecord[key] = oldRecord[key];
-	}
-
-	for (var key in updatedFields)
-	{
-		newRecord[key] = updatedFields[key];
-	}
-
-	return newRecord;
-}
-
-
-// APPEND
-
-var _Utils_append = F2(_Utils_ap);
-
-function _Utils_ap(xs, ys)
-{
-	// append Strings
-	if (typeof xs === 'string')
-	{
-		return xs + ys;
-	}
-
-	// append Lists
-	if (!xs.b)
-	{
-		return ys;
-	}
-	var root = _List_Cons(xs.a, ys);
-	xs = xs.b
-	for (var curr = root; xs.b; xs = xs.b) // WHILE_CONS
-	{
-		curr = curr.b = _List_Cons(xs.a, ys);
-	}
-	return root;
-}
-
-
-
-var _List_Nil_UNUSED = { $: 0 };
-var _List_Nil = { $: '[]' };
-
-function _List_Cons_UNUSED(hd, tl) { return { $: 1, a: hd, b: tl }; }
-function _List_Cons(hd, tl) { return { $: '::', a: hd, b: tl }; }
-
-
-var _List_cons = F2(_List_Cons);
-
-function _List_fromArray(arr)
-{
-	var out = _List_Nil;
-	for (var i = arr.length; i--; )
-	{
-		out = _List_Cons(arr[i], out);
-	}
-	return out;
-}
-
-function _List_toArray(xs)
-{
-	for (var out = []; xs.b; xs = xs.b) // WHILE_CONS
-	{
-		out.push(xs.a);
-	}
-	return out;
-}
-
-var _List_map2 = F3(function(f, xs, ys)
-{
-	for (var arr = []; xs.b && ys.b; xs = xs.b, ys = ys.b) // WHILE_CONSES
-	{
-		arr.push(A2(f, xs.a, ys.a));
-	}
-	return _List_fromArray(arr);
-});
-
-var _List_map3 = F4(function(f, xs, ys, zs)
-{
-	for (var arr = []; xs.b && ys.b && zs.b; xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
-	{
-		arr.push(A3(f, xs.a, ys.a, zs.a));
-	}
-	return _List_fromArray(arr);
-});
-
-var _List_map4 = F5(function(f, ws, xs, ys, zs)
-{
-	for (var arr = []; ws.b && xs.b && ys.b && zs.b; ws = ws.b, xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
-	{
-		arr.push(A4(f, ws.a, xs.a, ys.a, zs.a));
-	}
-	return _List_fromArray(arr);
-});
-
-var _List_map5 = F6(function(f, vs, ws, xs, ys, zs)
-{
-	for (var arr = []; vs.b && ws.b && xs.b && ys.b && zs.b; vs = vs.b, ws = ws.b, xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
-	{
-		arr.push(A5(f, vs.a, ws.a, xs.a, ys.a, zs.a));
-	}
-	return _List_fromArray(arr);
-});
-
-var _List_sortBy = F2(function(f, xs)
-{
-	return _List_fromArray(_List_toArray(xs).sort(function(a, b) {
-		return _Utils_cmp(f(a), f(b));
-	}));
-});
-
-var _List_sortWith = F2(function(f, xs)
-{
-	return _List_fromArray(_List_toArray(xs).sort(function(a, b) {
-		var ord = A2(f, a, b);
-		return ord === $elm$core$Basics$EQ ? 0 : ord === $elm$core$Basics$LT ? -1 : 1;
-	}));
-});
 
 
 
@@ -4392,31 +4392,14 @@ var _Bitwise_shiftRightZfBy = F2(function(offset, a)
 {
 	return a >>> offset;
 });
-var $elm$core$List$cons = _List_cons;
-var $elm$core$Elm$JsArray$foldr = _JsArray_foldr;
-var $elm$core$Array$foldr = F3(
-	function (func, baseCase, _v0) {
-		var tree = _v0.c;
-		var tail = _v0.d;
-		var helper = F2(
-			function (node, acc) {
-				if (node.$ === 'SubTree') {
-					var subTree = node.a;
-					return A3($elm$core$Elm$JsArray$foldr, helper, acc, subTree);
-				} else {
-					var values = node.a;
-					return A3($elm$core$Elm$JsArray$foldr, func, acc, values);
-				}
-			});
-		return A3(
-			$elm$core$Elm$JsArray$foldr,
-			helper,
-			A3($elm$core$Elm$JsArray$foldr, func, baseCase, tail),
-			tree);
+var $elm$core$Basics$always = F2(
+	function (a, _v0) {
+		return a;
 	});
-var $elm$core$Array$toList = function (array) {
-	return A3($elm$core$Array$foldr, $elm$core$List$cons, _List_Nil, array);
-};
+var $elm$core$Basics$EQ = {$: 'EQ'};
+var $elm$core$Basics$GT = {$: 'GT'};
+var $elm$core$Basics$LT = {$: 'LT'};
+var $elm$core$List$cons = _List_cons;
 var $elm$core$Dict$foldr = F3(
 	function (func, acc, t) {
 		foldr:
@@ -4469,278 +4452,30 @@ var $elm$core$Set$toList = function (_v0) {
 	var dict = _v0.a;
 	return $elm$core$Dict$keys(dict);
 };
-var $elm$core$Basics$EQ = {$: 'EQ'};
-var $elm$core$Basics$GT = {$: 'GT'};
-var $elm$core$Basics$LT = {$: 'LT'};
-var $author$project$Main$Grades = function (a) {
-	return {$: 'Grades', a: a};
-};
-var $elm$core$Basics$apL = F2(
-	function (f, x) {
-		return f(x);
-	});
-var $elm$core$Array$Array_elm_builtin = F4(
-	function (a, b, c, d) {
-		return {$: 'Array_elm_builtin', a: a, b: b, c: c, d: d};
-	});
-var $elm$core$Elm$JsArray$empty = _JsArray_empty;
-var $elm$core$Array$branchFactor = 32;
-var $elm$core$Basics$ceiling = _Basics_ceiling;
-var $elm$core$Basics$fdiv = _Basics_fdiv;
-var $elm$core$Basics$logBase = F2(
-	function (base, number) {
-		return _Basics_log(number) / _Basics_log(base);
-	});
-var $elm$core$Basics$toFloat = _Basics_toFloat;
-var $elm$core$Array$shiftStep = $elm$core$Basics$ceiling(
-	A2($elm$core$Basics$logBase, 2, $elm$core$Array$branchFactor));
-var $elm$core$Array$empty = A4($elm$core$Array$Array_elm_builtin, 0, $elm$core$Array$shiftStep, $elm$core$Elm$JsArray$empty, $elm$core$Elm$JsArray$empty);
-var $elm$core$Array$Leaf = function (a) {
-	return {$: 'Leaf', a: a};
-};
-var $elm$core$Basics$True = {$: 'True'};
-var $elm$core$Basics$add = _Basics_add;
-var $elm$core$Basics$apR = F2(
-	function (x, f) {
-		return f(x);
-	});
-var $elm$core$Basics$eq = _Utils_equal;
-var $elm$core$Basics$floor = _Basics_floor;
-var $elm$core$Elm$JsArray$length = _JsArray_length;
-var $elm$core$Basics$gt = _Utils_gt;
-var $elm$core$Basics$max = F2(
-	function (x, y) {
-		return (_Utils_cmp(x, y) > 0) ? x : y;
-	});
-var $elm$core$Basics$mul = _Basics_mul;
-var $elm$core$List$foldl = F3(
-	function (func, acc, list) {
-		foldl:
-		while (true) {
-			if (!list.b) {
-				return acc;
-			} else {
-				var x = list.a;
-				var xs = list.b;
-				var $temp$func = func,
-					$temp$acc = A2(func, x, acc),
-					$temp$list = xs;
-				func = $temp$func;
-				acc = $temp$acc;
-				list = $temp$list;
-				continue foldl;
-			}
-		}
-	});
-var $elm$core$List$reverse = function (list) {
-	return A3($elm$core$List$foldl, $elm$core$List$cons, _List_Nil, list);
-};
-var $elm$core$Basics$sub = _Basics_sub;
-var $elm$core$Array$SubTree = function (a) {
-	return {$: 'SubTree', a: a};
-};
-var $elm$core$Elm$JsArray$initializeFromList = _JsArray_initializeFromList;
-var $elm$core$Array$compressNodes = F2(
-	function (nodes, acc) {
-		compressNodes:
-		while (true) {
-			var _v0 = A2($elm$core$Elm$JsArray$initializeFromList, $elm$core$Array$branchFactor, nodes);
-			var node = _v0.a;
-			var remainingNodes = _v0.b;
-			var newAcc = A2(
-				$elm$core$List$cons,
-				$elm$core$Array$SubTree(node),
-				acc);
-			if (!remainingNodes.b) {
-				return $elm$core$List$reverse(newAcc);
-			} else {
-				var $temp$nodes = remainingNodes,
-					$temp$acc = newAcc;
-				nodes = $temp$nodes;
-				acc = $temp$acc;
-				continue compressNodes;
-			}
-		}
-	});
-var $elm$core$Tuple$first = function (_v0) {
-	var x = _v0.a;
-	return x;
-};
-var $elm$core$Array$treeFromBuilder = F2(
-	function (nodeList, nodeListSize) {
-		treeFromBuilder:
-		while (true) {
-			var newNodeSize = $elm$core$Basics$ceiling(nodeListSize / $elm$core$Array$branchFactor);
-			if (newNodeSize === 1) {
-				return A2($elm$core$Elm$JsArray$initializeFromList, $elm$core$Array$branchFactor, nodeList).a;
-			} else {
-				var $temp$nodeList = A2($elm$core$Array$compressNodes, nodeList, _List_Nil),
-					$temp$nodeListSize = newNodeSize;
-				nodeList = $temp$nodeList;
-				nodeListSize = $temp$nodeListSize;
-				continue treeFromBuilder;
-			}
-		}
-	});
-var $elm$core$Array$builderToArray = F2(
-	function (reverseNodeList, builder) {
-		if (!builder.nodeListSize) {
-			return A4(
-				$elm$core$Array$Array_elm_builtin,
-				$elm$core$Elm$JsArray$length(builder.tail),
-				$elm$core$Array$shiftStep,
-				$elm$core$Elm$JsArray$empty,
-				builder.tail);
-		} else {
-			var treeLen = builder.nodeListSize * $elm$core$Array$branchFactor;
-			var depth = $elm$core$Basics$floor(
-				A2($elm$core$Basics$logBase, $elm$core$Array$branchFactor, treeLen - 1));
-			var correctNodeList = reverseNodeList ? $elm$core$List$reverse(builder.nodeList) : builder.nodeList;
-			var tree = A2($elm$core$Array$treeFromBuilder, correctNodeList, builder.nodeListSize);
-			return A4(
-				$elm$core$Array$Array_elm_builtin,
-				$elm$core$Elm$JsArray$length(builder.tail) + treeLen,
-				A2($elm$core$Basics$max, 5, depth * $elm$core$Array$shiftStep),
-				tree,
-				builder.tail);
-		}
-	});
-var $elm$core$Basics$lt = _Utils_lt;
-var $elm$core$Array$fromListHelp = F3(
-	function (list, nodeList, nodeListSize) {
-		fromListHelp:
-		while (true) {
-			var _v0 = A2($elm$core$Elm$JsArray$initializeFromList, $elm$core$Array$branchFactor, list);
-			var jsArray = _v0.a;
-			var remainingItems = _v0.b;
-			if (_Utils_cmp(
-				$elm$core$Elm$JsArray$length(jsArray),
-				$elm$core$Array$branchFactor) < 0) {
-				return A2(
-					$elm$core$Array$builderToArray,
-					true,
-					{nodeList: nodeList, nodeListSize: nodeListSize, tail: jsArray});
-			} else {
-				var $temp$list = remainingItems,
-					$temp$nodeList = A2(
-					$elm$core$List$cons,
-					$elm$core$Array$Leaf(jsArray),
-					nodeList),
-					$temp$nodeListSize = nodeListSize + 1;
-				list = $temp$list;
-				nodeList = $temp$nodeList;
-				nodeListSize = $temp$nodeListSize;
-				continue fromListHelp;
-			}
-		}
-	});
-var $elm$core$Array$fromList = function (list) {
-	if (!list.b) {
-		return $elm$core$Array$empty;
-	} else {
-		return A3($elm$core$Array$fromListHelp, list, _List_Nil, 0);
-	}
-};
-var $author$project$Main$Three = {$: 'Three'};
-var $author$project$Main$defaultGrade = $author$project$Main$Three;
-var $author$project$Main$initPart = function (n) {
-	return {grade: $author$project$Main$defaultGrade, name: n};
-};
-var $elm$core$List$foldrHelper = F4(
-	function (fn, acc, ctr, ls) {
-		if (!ls.b) {
-			return acc;
-		} else {
-			var a = ls.a;
-			var r1 = ls.b;
-			if (!r1.b) {
-				return A2(fn, a, acc);
-			} else {
-				var b = r1.a;
-				var r2 = r1.b;
-				if (!r2.b) {
-					return A2(
-						fn,
-						a,
-						A2(fn, b, acc));
+var $elm$core$Elm$JsArray$foldr = _JsArray_foldr;
+var $elm$core$Array$foldr = F3(
+	function (func, baseCase, _v0) {
+		var tree = _v0.c;
+		var tail = _v0.d;
+		var helper = F2(
+			function (node, acc) {
+				if (node.$ === 'SubTree') {
+					var subTree = node.a;
+					return A3($elm$core$Elm$JsArray$foldr, helper, acc, subTree);
 				} else {
-					var c = r2.a;
-					var r3 = r2.b;
-					if (!r3.b) {
-						return A2(
-							fn,
-							a,
-							A2(
-								fn,
-								b,
-								A2(fn, c, acc)));
-					} else {
-						var d = r3.a;
-						var r4 = r3.b;
-						var res = (ctr > 500) ? A3(
-							$elm$core$List$foldl,
-							fn,
-							acc,
-							$elm$core$List$reverse(r4)) : A4($elm$core$List$foldrHelper, fn, acc, ctr + 1, r4);
-						return A2(
-							fn,
-							a,
-							A2(
-								fn,
-								b,
-								A2(
-									fn,
-									c,
-									A2(fn, d, res))));
-					}
+					var values = node.a;
+					return A3($elm$core$Elm$JsArray$foldr, func, acc, values);
 				}
-			}
-		}
-	});
-var $elm$core$List$foldr = F3(
-	function (fn, acc, ls) {
-		return A4($elm$core$List$foldrHelper, fn, acc, 0, ls);
-	});
-var $elm$core$List$map = F2(
-	function (f, xs) {
+			});
 		return A3(
-			$elm$core$List$foldr,
-			F2(
-				function (x, acc) {
-					return A2(
-						$elm$core$List$cons,
-						f(x),
-						acc);
-				}),
-			_List_Nil,
-			xs);
+			$elm$core$Elm$JsArray$foldr,
+			helper,
+			A3($elm$core$Elm$JsArray$foldr, func, baseCase, tail),
+			tree);
 	});
-var $author$project$Main$initModuleParts = function (names) {
-	return $elm$core$Array$fromList(
-		A2($elm$core$List$map, $author$project$Main$initPart, names));
+var $elm$core$Array$toList = function (array) {
+	return A3($elm$core$Array$foldr, $elm$core$List$cons, _List_Nil, array);
 };
-var $author$project$Main$multipleGrades = function (names) {
-	return $author$project$Main$Grades(
-		$author$project$Main$initModuleParts(names));
-};
-var $author$project$Main$dspAssignments = {
-	code: '2010',
-	credits: 5,
-	grades: $author$project$Main$multipleGrades(
-		_List_fromArray(
-			['Fundamental concepts', 'The process concept', 'Threads, synchronization and deadlock'])),
-	name: 'Assignments'
-};
-var $author$project$Main$SingleGrade = function (a) {
-	return {$: 'SingleGrade', a: a};
-};
-var $author$project$Main$singleGrade = $author$project$Main$SingleGrade($author$project$Main$defaultGrade);
-var $author$project$Main$dspExam = {code: '1010', credits: 2, grades: $author$project$Main$singleGrade, name: 'Written exam'};
-var $author$project$Main$dspProjectGroup = {code: '3020', credits: 2, grades: $author$project$Main$singleGrade, name: 'Project (group)'};
-var $author$project$Main$dspProjectIndividual = {code: '3010', credits: 5, grades: $author$project$Main$singleGrade, name: 'Project (individual)'};
-var $author$project$Main$dspModules = $elm$core$Array$fromList(
-	_List_fromArray(
-		[$author$project$Main$dspExam, $author$project$Main$dspAssignments, $author$project$Main$dspProjectIndividual, $author$project$Main$dspProjectGroup]));
 var $elm$core$Result$Err = function (a) {
 	return {$: 'Err', a: a};
 };
@@ -4763,6 +4498,7 @@ var $elm$json$Json$Decode$OneOf = function (a) {
 	return {$: 'OneOf', a: a};
 };
 var $elm$core$Basics$False = {$: 'False'};
+var $elm$core$Basics$add = _Basics_add;
 var $elm$core$Maybe$Just = function (a) {
 	return {$: 'Just', a: a};
 };
@@ -4790,6 +4526,25 @@ var $elm$json$Json$Decode$indent = function (str) {
 		'\n    ',
 		A2($elm$core$String$split, '\n', str));
 };
+var $elm$core$List$foldl = F3(
+	function (func, acc, list) {
+		foldl:
+		while (true) {
+			if (!list.b) {
+				return acc;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				var $temp$func = func,
+					$temp$acc = A2(func, x, acc),
+					$temp$list = xs;
+				func = $temp$func;
+				acc = $temp$acc;
+				list = $temp$list;
+				continue foldl;
+			}
+		}
+	});
 var $elm$core$List$length = function (xs) {
 	return A3(
 		$elm$core$List$foldl,
@@ -4802,6 +4557,7 @@ var $elm$core$List$length = function (xs) {
 };
 var $elm$core$List$map2 = _List_map2;
 var $elm$core$Basics$le = _Utils_le;
+var $elm$core$Basics$sub = _Basics_sub;
 var $elm$core$List$rangeHelp = F3(
 	function (lo, hi, list) {
 		rangeHelp:
@@ -4853,6 +4609,9 @@ var $elm$core$Char$isDigit = function (_char) {
 };
 var $elm$core$Char$isAlphaNum = function (_char) {
 	return $elm$core$Char$isLower(_char) || ($elm$core$Char$isUpper(_char) || $elm$core$Char$isDigit(_char));
+};
+var $elm$core$List$reverse = function (list) {
+	return A3($elm$core$List$foldl, $elm$core$List$cons, _List_Nil, list);
 };
 var $elm$core$String$uncons = _String_uncons;
 var $elm$json$Json$Decode$errorOneOf = F2(
@@ -4958,8 +4717,114 @@ var $elm$json$Json$Decode$errorToStringHelp = F2(
 			}
 		}
 	});
+var $elm$core$Array$branchFactor = 32;
+var $elm$core$Array$Array_elm_builtin = F4(
+	function (a, b, c, d) {
+		return {$: 'Array_elm_builtin', a: a, b: b, c: c, d: d};
+	});
+var $elm$core$Elm$JsArray$empty = _JsArray_empty;
+var $elm$core$Basics$ceiling = _Basics_ceiling;
+var $elm$core$Basics$fdiv = _Basics_fdiv;
+var $elm$core$Basics$logBase = F2(
+	function (base, number) {
+		return _Basics_log(number) / _Basics_log(base);
+	});
+var $elm$core$Basics$toFloat = _Basics_toFloat;
+var $elm$core$Array$shiftStep = $elm$core$Basics$ceiling(
+	A2($elm$core$Basics$logBase, 2, $elm$core$Array$branchFactor));
+var $elm$core$Array$empty = A4($elm$core$Array$Array_elm_builtin, 0, $elm$core$Array$shiftStep, $elm$core$Elm$JsArray$empty, $elm$core$Elm$JsArray$empty);
 var $elm$core$Elm$JsArray$initialize = _JsArray_initialize;
+var $elm$core$Array$Leaf = function (a) {
+	return {$: 'Leaf', a: a};
+};
+var $elm$core$Basics$apL = F2(
+	function (f, x) {
+		return f(x);
+	});
+var $elm$core$Basics$apR = F2(
+	function (x, f) {
+		return f(x);
+	});
+var $elm$core$Basics$eq = _Utils_equal;
+var $elm$core$Basics$floor = _Basics_floor;
+var $elm$core$Elm$JsArray$length = _JsArray_length;
+var $elm$core$Basics$gt = _Utils_gt;
+var $elm$core$Basics$max = F2(
+	function (x, y) {
+		return (_Utils_cmp(x, y) > 0) ? x : y;
+	});
+var $elm$core$Basics$mul = _Basics_mul;
+var $elm$core$Array$SubTree = function (a) {
+	return {$: 'SubTree', a: a};
+};
+var $elm$core$Elm$JsArray$initializeFromList = _JsArray_initializeFromList;
+var $elm$core$Array$compressNodes = F2(
+	function (nodes, acc) {
+		compressNodes:
+		while (true) {
+			var _v0 = A2($elm$core$Elm$JsArray$initializeFromList, $elm$core$Array$branchFactor, nodes);
+			var node = _v0.a;
+			var remainingNodes = _v0.b;
+			var newAcc = A2(
+				$elm$core$List$cons,
+				$elm$core$Array$SubTree(node),
+				acc);
+			if (!remainingNodes.b) {
+				return $elm$core$List$reverse(newAcc);
+			} else {
+				var $temp$nodes = remainingNodes,
+					$temp$acc = newAcc;
+				nodes = $temp$nodes;
+				acc = $temp$acc;
+				continue compressNodes;
+			}
+		}
+	});
+var $elm$core$Tuple$first = function (_v0) {
+	var x = _v0.a;
+	return x;
+};
+var $elm$core$Array$treeFromBuilder = F2(
+	function (nodeList, nodeListSize) {
+		treeFromBuilder:
+		while (true) {
+			var newNodeSize = $elm$core$Basics$ceiling(nodeListSize / $elm$core$Array$branchFactor);
+			if (newNodeSize === 1) {
+				return A2($elm$core$Elm$JsArray$initializeFromList, $elm$core$Array$branchFactor, nodeList).a;
+			} else {
+				var $temp$nodeList = A2($elm$core$Array$compressNodes, nodeList, _List_Nil),
+					$temp$nodeListSize = newNodeSize;
+				nodeList = $temp$nodeList;
+				nodeListSize = $temp$nodeListSize;
+				continue treeFromBuilder;
+			}
+		}
+	});
+var $elm$core$Array$builderToArray = F2(
+	function (reverseNodeList, builder) {
+		if (!builder.nodeListSize) {
+			return A4(
+				$elm$core$Array$Array_elm_builtin,
+				$elm$core$Elm$JsArray$length(builder.tail),
+				$elm$core$Array$shiftStep,
+				$elm$core$Elm$JsArray$empty,
+				builder.tail);
+		} else {
+			var treeLen = builder.nodeListSize * $elm$core$Array$branchFactor;
+			var depth = $elm$core$Basics$floor(
+				A2($elm$core$Basics$logBase, $elm$core$Array$branchFactor, treeLen - 1));
+			var correctNodeList = reverseNodeList ? $elm$core$List$reverse(builder.nodeList) : builder.nodeList;
+			var tree = A2($elm$core$Array$treeFromBuilder, correctNodeList, builder.nodeListSize);
+			return A4(
+				$elm$core$Array$Array_elm_builtin,
+				$elm$core$Elm$JsArray$length(builder.tail) + treeLen,
+				A2($elm$core$Basics$max, 5, depth * $elm$core$Array$shiftStep),
+				tree,
+				builder.tail);
+		}
+	});
 var $elm$core$Basics$idiv = _Basics_idiv;
+var $elm$core$Basics$lt = _Utils_lt;
 var $elm$core$Array$initializeHelp = F5(
 	function (fn, fromIndex, len, nodeList, tail) {
 		initializeHelp:
@@ -4998,6 +4863,7 @@ var $elm$core$Array$initialize = F2(
 			return A5($elm$core$Array$initializeHelp, fn, initialFromIndex, len, _List_Nil, tail);
 		}
 	});
+var $elm$core$Basics$True = {$: 'True'};
 var $elm$core$Result$isOk = function (result) {
 	if (result.$ === 'Ok') {
 		return true;
@@ -5175,6 +5041,75 @@ var $elm$core$Task$Perform = function (a) {
 };
 var $elm$core$Task$succeed = _Scheduler_succeed;
 var $elm$core$Task$init = $elm$core$Task$succeed(_Utils_Tuple0);
+var $elm$core$List$foldrHelper = F4(
+	function (fn, acc, ctr, ls) {
+		if (!ls.b) {
+			return acc;
+		} else {
+			var a = ls.a;
+			var r1 = ls.b;
+			if (!r1.b) {
+				return A2(fn, a, acc);
+			} else {
+				var b = r1.a;
+				var r2 = r1.b;
+				if (!r2.b) {
+					return A2(
+						fn,
+						a,
+						A2(fn, b, acc));
+				} else {
+					var c = r2.a;
+					var r3 = r2.b;
+					if (!r3.b) {
+						return A2(
+							fn,
+							a,
+							A2(
+								fn,
+								b,
+								A2(fn, c, acc)));
+					} else {
+						var d = r3.a;
+						var r4 = r3.b;
+						var res = (ctr > 500) ? A3(
+							$elm$core$List$foldl,
+							fn,
+							acc,
+							$elm$core$List$reverse(r4)) : A4($elm$core$List$foldrHelper, fn, acc, ctr + 1, r4);
+						return A2(
+							fn,
+							a,
+							A2(
+								fn,
+								b,
+								A2(
+									fn,
+									c,
+									A2(fn, d, res))));
+					}
+				}
+			}
+		}
+	});
+var $elm$core$List$foldr = F3(
+	function (fn, acc, ls) {
+		return A4($elm$core$List$foldrHelper, fn, acc, 0, ls);
+	});
+var $elm$core$List$map = F2(
+	function (f, xs) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, acc) {
+					return A2(
+						$elm$core$List$cons,
+						f(x),
+						acc);
+				}),
+			_List_Nil,
+			xs);
+	});
 var $elm$core$Task$andThen = _Scheduler_andThen;
 var $elm$core$Task$map = F2(
 	function (func, taskA) {
@@ -5249,28 +5184,98 @@ var $elm$core$Task$perform = F2(
 			$elm$core$Task$Perform(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
+var $elm$browser$Browser$element = _Browser_element;
+var $author$project$Main$Points = function (a) {
+	return {$: 'Points', a: a};
+};
+var $elm$core$Array$fromListHelp = F3(
+	function (list, nodeList, nodeListSize) {
+		fromListHelp:
+		while (true) {
+			var _v0 = A2($elm$core$Elm$JsArray$initializeFromList, $elm$core$Array$branchFactor, list);
+			var jsArray = _v0.a;
+			var remainingItems = _v0.b;
+			if (_Utils_cmp(
+				$elm$core$Elm$JsArray$length(jsArray),
+				$elm$core$Array$branchFactor) < 0) {
+				return A2(
+					$elm$core$Array$builderToArray,
+					true,
+					{nodeList: nodeList, nodeListSize: nodeListSize, tail: jsArray});
+			} else {
+				var $temp$list = remainingItems,
+					$temp$nodeList = A2(
+					$elm$core$List$cons,
+					$elm$core$Array$Leaf(jsArray),
+					nodeList),
+					$temp$nodeListSize = nodeListSize + 1;
+				list = $temp$list;
+				nodeList = $temp$nodeList;
+				nodeListSize = $temp$nodeListSize;
+				continue fromListHelp;
+			}
+		}
+	});
+var $elm$core$Array$fromList = function (list) {
+	if (!list.b) {
+		return $elm$core$Array$empty;
+	} else {
+		return A3($elm$core$Array$fromListHelp, list, _List_Nil, 0);
+	}
+};
+var $author$project$Main$higherGradeAssignment = F2(
+	function (name, max) {
+		return {mandatoryPass: true, max: max, name: name, points: 0};
+	});
+var $author$project$Main$higherGradeAssignments = F3(
+	function (four, five, assignments) {
+		return $author$project$Main$Points(
+			{
+				assignments: $elm$core$Array$fromList(
+					A2(
+						$elm$core$List$map,
+						function (_v0) {
+							var name = _v0.a;
+							var max = _v0.b;
+							return A2($author$project$Main$higherGradeAssignment, name, max);
+						},
+						assignments)),
+				five: five,
+				four: four
+			});
+	});
+var $author$project$Main$dspAssignments = {
+	assignments: A3(
+		$author$project$Main$higherGradeAssignments,
+		4,
+		8,
+		_List_fromArray(
+			[
+				_Utils_Tuple2('Fundamental concepts', 3),
+				_Utils_Tuple2('The process concept', 3),
+				_Utils_Tuple2('Threads, synchronization and deadlock', 4)
+			])),
+	code: '2010',
+	credits: 5,
+	name: 'Assignments'
+};
+var $author$project$Main$SingleGrade345 = function (a) {
+	return {$: 'SingleGrade345', a: a};
+};
+var $author$project$Main$Three = {$: 'Three'};
+var $author$project$Main$singleGrade345 = $author$project$Main$SingleGrade345(
+	$elm$core$Maybe$Just($author$project$Main$Three));
+var $author$project$Main$dspProjectGroup = {assignments: $author$project$Main$singleGrade345, code: '3020', credits: 2, name: 'Project (group)'};
+var $author$project$Main$dspProjectIndividual = {assignments: $author$project$Main$singleGrade345, code: '3010', credits: 5, name: 'Project (individual)'};
+var $author$project$Main$dspWrittenExam = {assignments: $author$project$Main$singleGrade345, code: '1010', credits: 2, name: 'Written exam'};
+var $author$project$Main$dspModel = $elm$core$Array$fromList(
+	_List_fromArray(
+		[$author$project$Main$dspWrittenExam, $author$project$Main$dspAssignments, $author$project$Main$dspProjectIndividual, $author$project$Main$dspProjectGroup]));
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $author$project$Main$init = _Utils_Tuple2($author$project$Main$dspModel, $elm$core$Platform$Cmd$none);
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
-var $elm$browser$Browser$sandbox = function (impl) {
-	return _Browser_element(
-		{
-			init: function (_v0) {
-				return _Utils_Tuple2(impl.init, $elm$core$Platform$Cmd$none);
-			},
-			subscriptions: function (_v1) {
-				return $elm$core$Platform$Sub$none;
-			},
-			update: F2(
-				function (msg, model) {
-					return _Utils_Tuple2(
-						A2(impl.update, msg, model),
-						$elm$core$Platform$Cmd$none);
-				}),
-			view: impl.view
-		});
-};
 var $elm$core$Bitwise$and = _Bitwise_and;
 var $elm$core$Bitwise$shiftRightZfBy = _Bitwise_shiftRightZfBy;
 var $elm$core$Array$bitMask = 4294967295 >>> (32 - $elm$core$Array$shiftStep);
@@ -5372,52 +5377,139 @@ var $elm_community$array_extra$Array$Extra$update = F2(
 			}
 		};
 	});
+var $author$project$Main$AverageGrade345 = function (a) {
+	return {$: 'AverageGrade345', a: a};
+};
+var $author$project$Main$updateAssignmentGrade = F3(
+	function (assignmentIndex, grade, m) {
+		var _v0 = m.assignments;
+		if (_v0.$ === 'AverageGrade345') {
+			var assignments = _v0.a;
+			var newAssignments = A3(
+				$elm_community$array_extra$Array$Extra$update,
+				assignmentIndex,
+				function (a) {
+					return _Utils_update(
+						a,
+						{grade: grade});
+				},
+				assignments);
+			return _Utils_update(
+				m,
+				{
+					assignments: $author$project$Main$AverageGrade345(newAssignments)
+				});
+		} else {
+			return m;
+		}
+	});
+var $author$project$Main$updateHigherGradePoints = F3(
+	function (assignmentIndex, points, m) {
+		var _v0 = m.assignments;
+		if (_v0.$ === 'Points') {
+			var assignments = _v0.a;
+			var newAssignments = A3(
+				$elm_community$array_extra$Array$Extra$update,
+				assignmentIndex,
+				function (a) {
+					return _Utils_update(
+						a,
+						{points: points});
+				},
+				assignments.assignments);
+			return _Utils_update(
+				m,
+				{
+					assignments: $author$project$Main$Points(
+						_Utils_update(
+							assignments,
+							{assignments: newAssignments}))
+				});
+		} else {
+			return m;
+		}
+	});
+var $author$project$Main$updateMandatoryPass = F3(
+	function (assignmentIndex, pass, m) {
+		var _v0 = m.assignments;
+		if (_v0.$ === 'Points') {
+			var assignments = _v0.a;
+			var newAssignments = A3(
+				$elm_community$array_extra$Array$Extra$update,
+				assignmentIndex,
+				function (a) {
+					return _Utils_update(
+						a,
+						{mandatoryPass: pass});
+				},
+				assignments.assignments);
+			return _Utils_update(
+				m,
+				{
+					assignments: $author$project$Main$Points(
+						_Utils_update(
+							assignments,
+							{assignments: newAssignments}))
+				});
+		} else {
+			return m;
+		}
+	});
+var $author$project$Main$updateSingleGrade = F2(
+	function (grade, m) {
+		var _v0 = m.assignments;
+		if (_v0.$ === 'SingleGrade345') {
+			return _Utils_update(
+				m,
+				{
+					assignments: $author$project$Main$SingleGrade345(grade)
+				});
+		} else {
+			return m;
+		}
+	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
-		if (msg.$ === 'SetModuleGrade') {
-			var moduleIndex = msg.a;
-			var grade = msg.b;
-			return A3(
-				$elm_community$array_extra$Array$Extra$update,
-				moduleIndex,
-				function (mod) {
-					return _Utils_update(
-						mod,
-						{
-							grades: $author$project$Main$SingleGrade(grade)
-						});
-				},
-				model);
-		} else {
-			var moduleIndex = msg.a;
-			var partIndex = msg.b;
-			var grade = msg.c;
-			return A3(
-				$elm_community$array_extra$Array$Extra$update,
-				moduleIndex,
-				function (mod) {
-					var _v1 = mod.grades;
-					if (_v1.$ === 'SingleGrade') {
-						return mod;
-					} else {
-						var grades = _v1.a;
-						return _Utils_update(
-							mod,
-							{
-								grades: $author$project$Main$Grades(
-									A3(
-										$elm_community$array_extra$Array$Extra$update,
-										partIndex,
-										function (part) {
-											return _Utils_update(
-												part,
-												{grade: grade});
-										},
-										grades))
-							});
-					}
-				},
-				model);
+		switch (msg.$) {
+			case 'SetSinglGrade345':
+				var moduleIndex = msg.a;
+				var grade = msg.b;
+				var newModel = A3(
+					$elm_community$array_extra$Array$Extra$update,
+					moduleIndex,
+					$author$project$Main$updateSingleGrade(grade),
+					model);
+				return _Utils_Tuple2(newModel, $elm$core$Platform$Cmd$none);
+			case 'SetAverageGrade345':
+				var moduleIndex = msg.a;
+				var assignmentIndex = msg.b;
+				var grade = msg.c;
+				var newModel = A3(
+					$elm_community$array_extra$Array$Extra$update,
+					moduleIndex,
+					A2($author$project$Main$updateAssignmentGrade, assignmentIndex, grade),
+					model);
+				return _Utils_Tuple2(newModel, $elm$core$Platform$Cmd$none);
+			case 'SetMandatoryPass':
+				var moduleIndex = msg.a;
+				var assignmentIndex = msg.b;
+				var pass = msg.c;
+				var newModel = A3(
+					$elm_community$array_extra$Array$Extra$update,
+					moduleIndex,
+					A2($author$project$Main$updateMandatoryPass, assignmentIndex, pass),
+					model);
+				return _Utils_Tuple2(newModel, $elm$core$Platform$Cmd$none);
+			default:
+				var moduleIndex = msg.a;
+				var assignmentIndex = msg.b;
+				var points = msg.c;
+				var newModel = A3(
+					$elm_community$array_extra$Array$Extra$update,
+					moduleIndex,
+					A2($author$project$Main$updateHigherGradePoints, assignmentIndex, points),
+					model);
+				return _Utils_Tuple2(newModel, $elm$core$Platform$Cmd$none);
 		}
 	});
 var $mdgriffith$elm_ui$Internal$Model$Unkeyed = function (a) {
@@ -11341,27 +11433,59 @@ var $mdgriffith$elm_ui$Element$layoutWith = F3(
 	});
 var $mdgriffith$elm_ui$Element$layout = $mdgriffith$elm_ui$Element$layoutWith(
 	{options: _List_Nil});
-var $mdgriffith$elm_ui$Internal$Model$AlignY = function (a) {
-	return {$: 'AlignY', a: a};
+var $mdgriffith$elm_ui$Internal$Model$PaddingStyle = F5(
+	function (a, b, c, d, e) {
+		return {$: 'PaddingStyle', a: a, b: b, c: c, d: d, e: e};
+	});
+var $mdgriffith$elm_ui$Internal$Flag$padding = $mdgriffith$elm_ui$Internal$Flag$flag(2);
+var $mdgriffith$elm_ui$Element$padding = function (x) {
+	var f = x;
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$padding,
+		A5(
+			$mdgriffith$elm_ui$Internal$Model$PaddingStyle,
+			'p-' + $elm$core$String$fromInt(x),
+			f,
+			f,
+			f,
+			f));
 };
-var $mdgriffith$elm_ui$Internal$Model$Bottom = {$: 'Bottom'};
-var $mdgriffith$elm_ui$Element$alignBottom = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Bottom);
+var $mdgriffith$elm_ui$Internal$Model$Px = function (a) {
+	return {$: 'Px', a: a};
+};
+var $mdgriffith$elm_ui$Element$px = $mdgriffith$elm_ui$Internal$Model$Px;
+var $mdgriffith$elm_ui$Element$Font$size = function (i) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$fontSize,
+		$mdgriffith$elm_ui$Internal$Model$FontSize(i));
+};
+var $mdgriffith$elm_ui$Internal$Model$SpacingStyle = F3(
+	function (a, b, c) {
+		return {$: 'SpacingStyle', a: a, b: b, c: c};
+	});
+var $mdgriffith$elm_ui$Internal$Flag$spacing = $mdgriffith$elm_ui$Internal$Flag$flag(3);
+var $mdgriffith$elm_ui$Internal$Model$spacingName = F2(
+	function (x, y) {
+		return 'spacing-' + ($elm$core$String$fromInt(x) + ('-' + $elm$core$String$fromInt(y)));
+	});
+var $mdgriffith$elm_ui$Element$spacing = function (x) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$spacing,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$SpacingStyle,
+			A2($mdgriffith$elm_ui$Internal$Model$spacingName, x, x),
+			x,
+			x));
+};
 var $mdgriffith$elm_ui$Internal$Model$Class = F2(
 	function (a, b) {
 		return {$: 'Class', a: a, b: b};
 	});
 var $mdgriffith$elm_ui$Internal$Flag$fontWeight = $mdgriffith$elm_ui$Internal$Flag$flag(13);
 var $mdgriffith$elm_ui$Element$Font$bold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.bold);
-var $elm$html$Html$br = _VirtualDom_node('br');
-var $mdgriffith$elm_ui$Internal$Flag$fontAlignment = $mdgriffith$elm_ui$Internal$Flag$flag(12);
-var $mdgriffith$elm_ui$Element$Font$center = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontAlignment, $mdgriffith$elm_ui$Internal$Style$classes.textCenter);
-var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
-	return {$: 'AlignX', a: a};
-};
-var $mdgriffith$elm_ui$Internal$Model$CenterX = {$: 'CenterX'};
-var $mdgriffith$elm_ui$Element$centerX = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$CenterX);
-var $mdgriffith$elm_ui$Internal$Model$Empty = {$: 'Empty'};
-var $mdgriffith$elm_ui$Element$none = $mdgriffith$elm_ui$Internal$Model$Empty;
 var $mdgriffith$elm_ui$Element$el = F2(
 	function (attrs, child) {
 		return A4(
@@ -11379,44 +11503,724 @@ var $mdgriffith$elm_ui$Element$el = F2(
 				_List_fromArray(
 					[child])));
 	});
-var $mdgriffith$elm_ui$Internal$Model$Fill = function (a) {
-	return {$: 'Fill', a: a};
-};
-var $mdgriffith$elm_ui$Element$fill = $mdgriffith$elm_ui$Internal$Model$Fill(1);
-var $mdgriffith$elm_ui$Internal$Model$PaddingStyle = F5(
-	function (a, b, c, d, e) {
-		return {$: 'PaddingStyle', a: a, b: b, c: c, d: d, e: e};
-	});
-var $mdgriffith$elm_ui$Internal$Flag$padding = $mdgriffith$elm_ui$Internal$Flag$flag(2);
-var $mdgriffith$elm_ui$Element$paddingXY = F2(
-	function (x, y) {
-		if (_Utils_eq(x, y)) {
-			var f = x;
-			return A2(
-				$mdgriffith$elm_ui$Internal$Model$StyleClass,
-				$mdgriffith$elm_ui$Internal$Flag$padding,
-				A5(
-					$mdgriffith$elm_ui$Internal$Model$PaddingStyle,
-					'p-' + $elm$core$String$fromInt(x),
-					f,
-					f,
-					f,
-					f));
-		} else {
-			var yFloat = y;
-			var xFloat = x;
-			return A2(
-				$mdgriffith$elm_ui$Internal$Model$StyleClass,
-				$mdgriffith$elm_ui$Internal$Flag$padding,
-				A5(
-					$mdgriffith$elm_ui$Internal$Model$PaddingStyle,
-					'p-' + ($elm$core$String$fromInt(x) + ('-' + $elm$core$String$fromInt(y))),
-					yFloat,
-					xFloat,
-					yFloat,
-					xFloat));
+var $elm_community$maybe_extra$Maybe$Extra$combineHelp = F2(
+	function (list, acc) {
+		combineHelp:
+		while (true) {
+			if (list.b) {
+				var head = list.a;
+				var tail = list.b;
+				if (head.$ === 'Just') {
+					var a = head.a;
+					var $temp$list = tail,
+						$temp$acc = A2($elm$core$List$cons, a, acc);
+					list = $temp$list;
+					acc = $temp$acc;
+					continue combineHelp;
+				} else {
+					return $elm$core$Maybe$Nothing;
+				}
+			} else {
+				return $elm$core$Maybe$Just(
+					$elm$core$List$reverse(acc));
+			}
 		}
 	});
+var $elm_community$maybe_extra$Maybe$Extra$combine = function (list) {
+	return A2($elm_community$maybe_extra$Maybe$Extra$combineHelp, list, _List_Nil);
+};
+var $elm$core$Elm$JsArray$map = _JsArray_map;
+var $elm$core$Array$map = F2(
+	function (func, _v0) {
+		var len = _v0.a;
+		var startShift = _v0.b;
+		var tree = _v0.c;
+		var tail = _v0.d;
+		var helper = function (node) {
+			if (node.$ === 'SubTree') {
+				var subTree = node.a;
+				return $elm$core$Array$SubTree(
+					A2($elm$core$Elm$JsArray$map, helper, subTree));
+			} else {
+				var values = node.a;
+				return $elm$core$Array$Leaf(
+					A2($elm$core$Elm$JsArray$map, func, values));
+			}
+		};
+		return A4(
+			$elm$core$Array$Array_elm_builtin,
+			len,
+			startShift,
+			A2($elm$core$Elm$JsArray$map, helper, tree),
+			A2($elm$core$Elm$JsArray$map, func, tail));
+	});
+var $author$project$Main$SingleModuleGrade = function (a) {
+	return {$: 'SingleModuleGrade', a: a};
+};
+var $author$project$Main$AverageModuleGrade = function (a) {
+	return {$: 'AverageModuleGrade', a: a};
+};
+var $elm$core$Maybe$andThen = F2(
+	function (callback, maybeValue) {
+		if (maybeValue.$ === 'Just') {
+			var value = maybeValue.a;
+			return callback(value);
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $author$project$Main$grade345ToInt = function (grade) {
+	switch (grade.$) {
+		case 'Three':
+			return 3;
+		case 'Four':
+			return 4;
+		default:
+			return 5;
+	}
+};
+var $author$project$Main$Five = {$: 'Five'};
+var $author$project$Main$Four = {$: 'Four'};
+var $author$project$Main$intToGrade345 = function (grade) {
+	switch (grade) {
+		case 3:
+			return $elm$core$Maybe$Just($author$project$Main$Three);
+		case 4:
+			return $elm$core$Maybe$Just($author$project$Main$Four);
+		case 5:
+			return $elm$core$Maybe$Just($author$project$Main$Five);
+		default:
+			return $elm$core$Maybe$Nothing;
+	}
+};
+var $elm$core$Array$length = function (_v0) {
+	var len = _v0.a;
+	return len;
+};
+var $hayleigh_dot_dev$tuple_extra$Tuple$Extra$apply = F2(
+	function (f, _v0) {
+		var a = _v0.a;
+		var b = _v0.b;
+		return A2(f, a, b);
+	});
+var $elm$core$Maybe$map2 = F3(
+	function (func, ma, mb) {
+		if (ma.$ === 'Nothing') {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			var a = ma.a;
+			if (mb.$ === 'Nothing') {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var b = mb.a;
+				return $elm$core$Maybe$Just(
+					A2(func, a, b));
+			}
+		}
+	});
+var $elm$core$Tuple$pair = F2(
+	function (a, b) {
+		return _Utils_Tuple2(a, b);
+	});
+var $hayleigh_dot_dev$tuple_extra$Tuple$Extra$sequenceMaybe = function (t) {
+	return A2(
+		$hayleigh_dot_dev$tuple_extra$Tuple$Extra$apply,
+		$elm$core$Maybe$map2($elm$core$Tuple$pair),
+		t);
+};
+var $elm$core$List$sum = function (numbers) {
+	return A3($elm$core$List$foldl, $elm$core$Basics$add, 0, numbers);
+};
+var $author$project$Main$averageGradeHelper = function (assignments) {
+	return A2(
+		$elm$core$Maybe$map,
+		function (_v0) {
+			var grade = _v0.a;
+			var average = _v0.b;
+			return {average: average, grade: grade};
+		},
+		A2(
+			$elm$core$Maybe$andThen,
+			function (average) {
+				return $hayleigh_dot_dev$tuple_extra$Tuple$Extra$sequenceMaybe(
+					_Utils_Tuple2(
+						$author$project$Main$intToGrade345(
+							$elm$core$Basics$round(average)),
+						$elm$core$Maybe$Just(average)));
+			},
+			A2(
+				$elm$core$Maybe$map,
+				function (grades) {
+					return function (sum) {
+						return sum / $elm$core$Array$length(assignments);
+					}(
+						$elm$core$List$sum(
+							A2($elm$core$List$map, $author$project$Main$grade345ToInt, grades)));
+				},
+				$elm_community$maybe_extra$Maybe$Extra$combine(
+					$elm$core$Array$toList(
+						A2(
+							$elm$core$Array$map,
+							function ($) {
+								return $.grade;
+							},
+							assignments))))));
+};
+var $author$project$Main$averageGrade = function (assignments) {
+	return $author$project$Main$AverageModuleGrade(
+		$author$project$Main$averageGradeHelper(assignments));
+};
+var $author$project$Main$PointesModuleGrade = function (a) {
+	return {$: 'PointesModuleGrade', a: a};
+};
+var $author$project$Main$combine3Tuples = F5(
+	function (f, g, h, _v0, _v1) {
+		var a = _v0.a;
+		var b = _v0.b;
+		var c = _v0.c;
+		var aa = _v1.a;
+		var bb = _v1.b;
+		var cc = _v1.c;
+		return _Utils_Tuple3(
+			A2(f, a, aa),
+			A2(g, b, bb),
+			A2(h, c, cc));
+	});
+var $elm$core$Elm$JsArray$foldl = _JsArray_foldl;
+var $elm$core$Array$foldl = F3(
+	function (func, baseCase, _v0) {
+		var tree = _v0.c;
+		var tail = _v0.d;
+		var helper = F2(
+			function (node, acc) {
+				if (node.$ === 'SubTree') {
+					var subTree = node.a;
+					return A3($elm$core$Elm$JsArray$foldl, helper, acc, subTree);
+				} else {
+					var values = node.a;
+					return A3($elm$core$Elm$JsArray$foldl, func, acc, values);
+				}
+			});
+		return A3(
+			$elm$core$Elm$JsArray$foldl,
+			func,
+			A3($elm$core$Elm$JsArray$foldl, helper, baseCase, tree),
+			tail);
+	});
+var $author$project$Main$pointsToGrade345 = F3(
+	function (points, four, five) {
+		return (_Utils_cmp(points, five) > -1) ? $author$project$Main$Five : ((_Utils_cmp(points, four) > -1) ? $author$project$Main$Four : $author$project$Main$Three);
+	});
+var $author$project$Main$pointsGradeHelper = function (assignments) {
+	return function (_v0) {
+		var allMandatoryPass = _v0.a;
+		var points = _v0.b;
+		var max = _v0.c;
+		var grade = allMandatoryPass ? $elm$core$Maybe$Just(
+			A3($author$project$Main$pointsToGrade345, points, assignments.four, assignments.five)) : $elm$core$Maybe$Nothing;
+		return {five: assignments.five, four: assignments.four, grade: grade, max: max, points: points};
+	}(
+		A3(
+			$elm$core$Array$foldl,
+			A3($author$project$Main$combine3Tuples, $elm$core$Basics$and, $elm$core$Basics$add, $elm$core$Basics$add),
+			_Utils_Tuple3(true, 0, 0),
+			A2(
+				$elm$core$Array$map,
+				function (assignment) {
+					return _Utils_Tuple3(assignment.mandatoryPass, assignment.points, assignment.max);
+				},
+				assignments.assignments)));
+};
+var $author$project$Main$pointsGrade = function (assignments) {
+	return $author$project$Main$PointesModuleGrade(
+		$author$project$Main$pointsGradeHelper(assignments));
+};
+var $author$project$Main$moduleGrade = function (m) {
+	var _v0 = m.assignments;
+	switch (_v0.$) {
+		case 'SingleGrade345':
+			var maybeGrade345 = _v0.a;
+			return $author$project$Main$SingleModuleGrade(maybeGrade345);
+		case 'AverageGrade345':
+			var assignments = _v0.a;
+			return $author$project$Main$averageGrade(assignments);
+		default:
+			var assignments = _v0.a;
+			return $author$project$Main$pointsGrade(assignments);
+	}
+};
+var $author$project$Main$moduleGradeToMaybeInt = function (grade) {
+	switch (grade.$) {
+		case 'SingleModuleGrade':
+			var g = grade.a;
+			return A2($elm$core$Maybe$map, $author$project$Main$grade345ToInt, g);
+		case 'AverageModuleGrade':
+			if (grade.a.$ === 'Just') {
+				var g = grade.a.a;
+				return $elm$core$Maybe$Just(
+					$author$project$Main$grade345ToInt(g.grade));
+			} else {
+				var _v1 = grade.a;
+				return $elm$core$Maybe$Nothing;
+			}
+		default:
+			var g = grade.a;
+			return A2($elm$core$Maybe$map, $author$project$Main$grade345ToInt, g.grade);
+	}
+};
+var $hayleigh_dot_dev$tuple_extra$Tuple$Extra$sequenceSecondMaybe = function (t) {
+	return $hayleigh_dot_dev$tuple_extra$Tuple$Extra$sequenceMaybe(
+		A2($elm$core$Tuple$mapFirst, $elm$core$Maybe$Just, t));
+};
+var $author$project$Main$finalGrade = function (modules) {
+	var weightedGrades = A2(
+		$elm$core$Maybe$map,
+		$elm$core$List$sum,
+		A2(
+			$elm$core$Maybe$map,
+			$elm$core$List$map(
+				function (_v0) {
+					var w = _v0.a;
+					var c = _v0.b;
+					return w * c;
+				}),
+			$elm_community$maybe_extra$Maybe$Extra$combine(
+				A2(
+					$elm$core$List$map,
+					$hayleigh_dot_dev$tuple_extra$Tuple$Extra$sequenceSecondMaybe,
+					$elm$core$Array$toList(
+						A2(
+							$elm$core$Array$map,
+							function (m) {
+								return _Utils_Tuple2(
+									m.credits,
+									$author$project$Main$moduleGradeToMaybeInt(
+										$author$project$Main$moduleGrade(m)));
+							},
+							modules))))));
+	var credits = $elm$core$List$sum(
+		$elm$core$Array$toList(
+			A2(
+				$elm$core$Array$map,
+				function ($) {
+					return $.credits;
+				},
+				modules)));
+	var fg = A2(
+		$elm$core$Maybe$map,
+		function (sum) {
+			return sum / credits;
+		},
+		A2($elm$core$Maybe$map, $elm$core$Basics$toFloat, weightedGrades));
+	return {credits: credits, finalGrade: fg, weightedGrades: weightedGrades};
+};
+var $elm$core$Basics$abs = function (n) {
+	return (n < 0) ? (-n) : n;
+};
+var $elm$core$String$foldr = _String_foldr;
+var $elm$core$String$toList = function (string) {
+	return A3($elm$core$String$foldr, $elm$core$List$cons, _List_Nil, string);
+};
+var $myrho$elm_round$Round$addSign = F2(
+	function (signed, str) {
+		var isNotZero = A2(
+			$elm$core$List$any,
+			function (c) {
+				return (!_Utils_eq(
+					c,
+					_Utils_chr('0'))) && (!_Utils_eq(
+					c,
+					_Utils_chr('.')));
+			},
+			$elm$core$String$toList(str));
+		return _Utils_ap(
+			(signed && isNotZero) ? '-' : '',
+			str);
+	});
+var $elm$core$String$cons = _String_cons;
+var $elm$core$Char$fromCode = _Char_fromCode;
+var $myrho$elm_round$Round$increaseNum = function (_v0) {
+	var head = _v0.a;
+	var tail = _v0.b;
+	if (_Utils_eq(
+		head,
+		_Utils_chr('9'))) {
+		var _v1 = $elm$core$String$uncons(tail);
+		if (_v1.$ === 'Nothing') {
+			return '01';
+		} else {
+			var headtail = _v1.a;
+			return A2(
+				$elm$core$String$cons,
+				_Utils_chr('0'),
+				$myrho$elm_round$Round$increaseNum(headtail));
+		}
+	} else {
+		var c = $elm$core$Char$toCode(head);
+		return ((c >= 48) && (c < 57)) ? A2(
+			$elm$core$String$cons,
+			$elm$core$Char$fromCode(c + 1),
+			tail) : '0';
+	}
+};
+var $elm$core$Basics$isInfinite = _Basics_isInfinite;
+var $elm$core$Basics$isNaN = _Basics_isNaN;
+var $elm$core$String$fromChar = function (_char) {
+	return A2($elm$core$String$cons, _char, '');
+};
+var $elm$core$Bitwise$shiftRightBy = _Bitwise_shiftRightBy;
+var $elm$core$String$repeatHelp = F3(
+	function (n, chunk, result) {
+		return (n <= 0) ? result : A3(
+			$elm$core$String$repeatHelp,
+			n >> 1,
+			_Utils_ap(chunk, chunk),
+			(!(n & 1)) ? result : _Utils_ap(result, chunk));
+	});
+var $elm$core$String$repeat = F2(
+	function (n, chunk) {
+		return A3($elm$core$String$repeatHelp, n, chunk, '');
+	});
+var $elm$core$String$padRight = F3(
+	function (n, _char, string) {
+		return _Utils_ap(
+			string,
+			A2(
+				$elm$core$String$repeat,
+				n - $elm$core$String$length(string),
+				$elm$core$String$fromChar(_char)));
+	});
+var $elm$core$String$reverse = _String_reverse;
+var $myrho$elm_round$Round$splitComma = function (str) {
+	var _v0 = A2($elm$core$String$split, '.', str);
+	if (_v0.b) {
+		if (_v0.b.b) {
+			var before = _v0.a;
+			var _v1 = _v0.b;
+			var after = _v1.a;
+			return _Utils_Tuple2(before, after);
+		} else {
+			var before = _v0.a;
+			return _Utils_Tuple2(before, '0');
+		}
+	} else {
+		return _Utils_Tuple2('0', '0');
+	}
+};
+var $myrho$elm_round$Round$toDecimal = function (fl) {
+	var _v0 = A2(
+		$elm$core$String$split,
+		'e',
+		$elm$core$String$fromFloat(
+			$elm$core$Basics$abs(fl)));
+	if (_v0.b) {
+		if (_v0.b.b) {
+			var num = _v0.a;
+			var _v1 = _v0.b;
+			var exp = _v1.a;
+			var e = A2(
+				$elm$core$Maybe$withDefault,
+				0,
+				$elm$core$String$toInt(
+					A2($elm$core$String$startsWith, '+', exp) ? A2($elm$core$String$dropLeft, 1, exp) : exp));
+			var _v2 = $myrho$elm_round$Round$splitComma(num);
+			var before = _v2.a;
+			var after = _v2.b;
+			var total = _Utils_ap(before, after);
+			var zeroed = (e < 0) ? A2(
+				$elm$core$Maybe$withDefault,
+				'0',
+				A2(
+					$elm$core$Maybe$map,
+					function (_v3) {
+						var a = _v3.a;
+						var b = _v3.b;
+						return a + ('.' + b);
+					},
+					A2(
+						$elm$core$Maybe$map,
+						$elm$core$Tuple$mapFirst($elm$core$String$fromChar),
+						$elm$core$String$uncons(
+							_Utils_ap(
+								A2(
+									$elm$core$String$repeat,
+									$elm$core$Basics$abs(e),
+									'0'),
+								total))))) : A3(
+				$elm$core$String$padRight,
+				e + 1,
+				_Utils_chr('0'),
+				total);
+			return _Utils_ap(
+				(fl < 0) ? '-' : '',
+				zeroed);
+		} else {
+			var num = _v0.a;
+			return _Utils_ap(
+				(fl < 0) ? '-' : '',
+				num);
+		}
+	} else {
+		return '';
+	}
+};
+var $myrho$elm_round$Round$roundFun = F3(
+	function (functor, s, fl) {
+		if ($elm$core$Basics$isInfinite(fl) || $elm$core$Basics$isNaN(fl)) {
+			return $elm$core$String$fromFloat(fl);
+		} else {
+			var signed = fl < 0;
+			var _v0 = $myrho$elm_round$Round$splitComma(
+				$myrho$elm_round$Round$toDecimal(
+					$elm$core$Basics$abs(fl)));
+			var before = _v0.a;
+			var after = _v0.b;
+			var r = $elm$core$String$length(before) + s;
+			var normalized = _Utils_ap(
+				A2($elm$core$String$repeat, (-r) + 1, '0'),
+				A3(
+					$elm$core$String$padRight,
+					r,
+					_Utils_chr('0'),
+					_Utils_ap(before, after)));
+			var totalLen = $elm$core$String$length(normalized);
+			var roundDigitIndex = A2($elm$core$Basics$max, 1, r);
+			var increase = A2(
+				functor,
+				signed,
+				A3($elm$core$String$slice, roundDigitIndex, totalLen, normalized));
+			var remains = A3($elm$core$String$slice, 0, roundDigitIndex, normalized);
+			var num = increase ? $elm$core$String$reverse(
+				A2(
+					$elm$core$Maybe$withDefault,
+					'1',
+					A2(
+						$elm$core$Maybe$map,
+						$myrho$elm_round$Round$increaseNum,
+						$elm$core$String$uncons(
+							$elm$core$String$reverse(remains))))) : remains;
+			var numLen = $elm$core$String$length(num);
+			var numZeroed = (num === '0') ? num : ((s <= 0) ? _Utils_ap(
+				num,
+				A2(
+					$elm$core$String$repeat,
+					$elm$core$Basics$abs(s),
+					'0')) : ((_Utils_cmp(
+				s,
+				$elm$core$String$length(after)) < 0) ? (A3($elm$core$String$slice, 0, numLen - s, num) + ('.' + A3($elm$core$String$slice, numLen - s, numLen, num))) : _Utils_ap(
+				before + '.',
+				A3(
+					$elm$core$String$padRight,
+					s,
+					_Utils_chr('0'),
+					after))));
+			return A2($myrho$elm_round$Round$addSign, signed, numZeroed);
+		}
+	});
+var $myrho$elm_round$Round$round = $myrho$elm_round$Round$roundFun(
+	F2(
+		function (signed, str) {
+			var _v0 = $elm$core$String$uncons(str);
+			if (_v0.$ === 'Nothing') {
+				return false;
+			} else {
+				if ('5' === _v0.a.a.valueOf()) {
+					if (_v0.a.b === '') {
+						var _v1 = _v0.a;
+						return !signed;
+					} else {
+						var _v2 = _v0.a;
+						return true;
+					}
+				} else {
+					var _v3 = _v0.a;
+					var _int = _v3.a;
+					return function (i) {
+						return ((i > 53) && signed) || ((i >= 53) && (!signed));
+					}(
+						$elm$core$Char$toCode(_int));
+				}
+			}
+		}));
+var $mdgriffith$elm_ui$Internal$Model$AsRow = {$: 'AsRow'};
+var $mdgriffith$elm_ui$Internal$Model$asRow = $mdgriffith$elm_ui$Internal$Model$AsRow;
+var $mdgriffith$elm_ui$Element$row = F2(
+	function (attrs, children) {
+		return A4(
+			$mdgriffith$elm_ui$Internal$Model$element,
+			$mdgriffith$elm_ui$Internal$Model$asRow,
+			$mdgriffith$elm_ui$Internal$Model$div,
+			A2(
+				$elm$core$List$cons,
+				$mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.contentLeft + (' ' + $mdgriffith$elm_ui$Internal$Style$classes.contentCenterY)),
+				A2(
+					$elm$core$List$cons,
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink),
+					A2(
+						$elm$core$List$cons,
+						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
+						attrs))),
+			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
+	});
+var $mdgriffith$elm_ui$Internal$Model$Text = function (a) {
+	return {$: 'Text', a: a};
+};
+var $mdgriffith$elm_ui$Element$text = function (content) {
+	return $mdgriffith$elm_ui$Internal$Model$Text(content);
+};
+var $author$project$Main$viewFinalGrade = function (model) {
+	var fg = $author$project$Main$finalGrade(model);
+	var txt = A2(
+		$elm$core$Maybe$withDefault,
+		'No grade',
+		A2(
+			$elm$core$Maybe$map,
+			function (_v0) {
+				var fgrade = _v0.a;
+				var wgrades = _v0.b;
+				return $elm$core$String$fromInt(
+					$elm$core$Basics$round(fgrade)) + ('   (' + ($elm$core$String$fromInt(wgrades) + (' / ' + ($elm$core$String$fromInt(fg.credits) + ('  ≈  ' + (A2($myrho$elm_round$Round$round, 2, fgrade) + ')'))))));
+			},
+			$hayleigh_dot_dev$tuple_extra$Tuple$Extra$sequenceMaybe(
+				_Utils_Tuple2(fg.finalGrade, fg.weightedGrades))));
+	return A2(
+		$mdgriffith$elm_ui$Element$row,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				$mdgriffith$elm_ui$Element$el,
+				_List_fromArray(
+					[$mdgriffith$elm_ui$Element$Font$bold]),
+				$mdgriffith$elm_ui$Element$text('Final grade   ')),
+				$mdgriffith$elm_ui$Element$text(txt)
+			]));
+};
+var $author$project$Main$SumRow = function (a) {
+	return {$: 'SumRow', a: a};
+};
+var $elm$core$Elm$JsArray$indexedMap = _JsArray_indexedMap;
+var $elm$core$Array$indexedMap = F2(
+	function (func, _v0) {
+		var len = _v0.a;
+		var tree = _v0.c;
+		var tail = _v0.d;
+		var initialBuilder = {
+			nodeList: _List_Nil,
+			nodeListSize: 0,
+			tail: A3(
+				$elm$core$Elm$JsArray$indexedMap,
+				func,
+				$elm$core$Array$tailIndex(len),
+				tail)
+		};
+		var helper = F2(
+			function (node, builder) {
+				if (node.$ === 'SubTree') {
+					var subTree = node.a;
+					return A3($elm$core$Elm$JsArray$foldl, helper, builder, subTree);
+				} else {
+					var leaf = node.a;
+					var offset = builder.nodeListSize * $elm$core$Array$branchFactor;
+					var mappedLeaf = $elm$core$Array$Leaf(
+						A3($elm$core$Elm$JsArray$indexedMap, func, offset, leaf));
+					return {
+						nodeList: A2($elm$core$List$cons, mappedLeaf, builder.nodeList),
+						nodeListSize: builder.nodeListSize + 1,
+						tail: builder.tail
+					};
+				}
+			});
+		return A2(
+			$elm$core$Array$builderToArray,
+			true,
+			A3($elm$core$Elm$JsArray$foldl, helper, initialBuilder, tree));
+	});
+var $author$project$Main$AverageAssignmentRow = function (a) {
+	return {$: 'AverageAssignmentRow', a: a};
+};
+var $author$project$Main$AverageModuleRow = function (a) {
+	return {$: 'AverageModuleRow', a: a};
+};
+var $author$project$Main$PointsAssignmentRow = function (a) {
+	return {$: 'PointsAssignmentRow', a: a};
+};
+var $author$project$Main$PointsModuleRow = function (a) {
+	return {$: 'PointsModuleRow', a: a};
+};
+var $author$project$Main$SingleGrade345ModuleRow = function (a) {
+	return {$: 'SingleGrade345ModuleRow', a: a};
+};
+var $author$project$Main$moduleTableRows = F2(
+	function (moduleIndex, m) {
+		var _v0 = m.assignments;
+		switch (_v0.$) {
+			case 'SingleGrade345':
+				var grade = _v0.a;
+				return _List_fromArray(
+					[
+						$author$project$Main$SingleGrade345ModuleRow(
+						{code: m.code, credits: m.credits, grade: grade, moduleIndex: moduleIndex, name: m.name})
+					]);
+			case 'AverageGrade345':
+				var assignments = _v0.a;
+				var grade = $author$project$Main$averageGradeHelper(assignments);
+				return A2(
+					$elm$core$List$cons,
+					$author$project$Main$AverageModuleRow(
+						{code: m.code, credits: m.credits, grade: grade, name: m.name}),
+					A2(
+						$elm$core$List$indexedMap,
+						F2(
+							function (assignmentIndex, assignment) {
+								return $author$project$Main$AverageAssignmentRow(
+									{assignmentIndex: assignmentIndex, grade: assignment.grade, moduleIndex: moduleIndex, name: assignment.name});
+							}),
+						$elm$core$Array$toList(assignments)));
+			default:
+				var assignments = _v0.a;
+				var grade = $author$project$Main$pointsGradeHelper(assignments);
+				return A2(
+					$elm$core$List$cons,
+					$author$project$Main$PointsModuleRow(
+						{code: m.code, credits: m.credits, five: assignments.five, four: assignments.four, grade: grade.grade, max: grade.max, name: m.name, points: grade.points}),
+					A2(
+						$elm$core$List$indexedMap,
+						F2(
+							function (assignmentIndex, assignment) {
+								return $author$project$Main$PointsAssignmentRow(
+									{assignmentIndex: assignmentIndex, mandatoryPass: assignment.mandatoryPass, max: assignment.max, moduleIndex: moduleIndex, name: assignment.name, points: assignment.points});
+							}),
+						$elm$core$Array$toList(assignments.assignments)));
+		}
+	});
+var $author$project$Main$modelToTableRows = function (model) {
+	var fg1 = $author$project$Main$finalGrade(model);
+	var fg = $author$project$Main$SumRow(
+		{sumCredits: fg1.credits, sumWeightedGrades: fg1.weightedGrades});
+	return function (rows) {
+		return A2(
+			$elm$core$List$append,
+			rows,
+			_List_fromArray(
+				[fg]));
+	}(
+		$elm$core$List$concat(
+			$elm$core$Array$toList(
+				A2(
+					$elm$core$Array$indexedMap,
+					F2(
+						function (moduleIndex, m) {
+							return A2($author$project$Main$moduleTableRows, moduleIndex, m);
+						}),
+					model))));
+};
+var $mdgriffith$elm_ui$Internal$Model$AlignY = function (a) {
+	return {$: 'AlignY', a: a};
+};
+var $mdgriffith$elm_ui$Internal$Model$Bottom = {$: 'Bottom'};
+var $mdgriffith$elm_ui$Element$alignBottom = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Bottom);
+var $author$project$Main$noBorders = {bottom: 0, left: 0, right: 0, top: 0};
 var $mdgriffith$elm_ui$Internal$Model$BorderWidth = F5(
 	function (a, b, c, d, e) {
 		return {$: 'BorderWidth', a: a, b: b, c: c, d: d, e: e};
@@ -11462,128 +12266,140 @@ var $mdgriffith$elm_ui$Element$Border$widthEach = function (_v0) {
 			bottom,
 			left));
 };
-var $author$project$Main$sumCell = F2(
-	function (attributes, child) {
+var $author$project$Main$bottomBorder = $mdgriffith$elm_ui$Element$Border$widthEach(
+	_Utils_update(
+		$author$project$Main$noBorders,
+		{bottom: 2}));
+var $author$project$Main$cell = F2(
+	function (attrs, child) {
 		return A2(
 			$mdgriffith$elm_ui$Element$el,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$Border$widthEach(
-					{bottom: 0, left: 0, right: 0, top: 2}),
-					A2($mdgriffith$elm_ui$Element$paddingXY, 0, 10),
-					$mdgriffith$elm_ui$Element$centerX
-				]),
 			A2(
-				$mdgriffith$elm_ui$Element$el,
-				_Utils_ap(
-					attributes,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$alignBottom])),
-				child));
+				$elm$core$List$cons,
+				$mdgriffith$elm_ui$Element$padding(10),
+				attrs),
+			child);
 	});
-var $mdgriffith$elm_ui$Internal$Model$Top = {$: 'Top'};
-var $mdgriffith$elm_ui$Element$alignTop = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Top);
-var $author$project$Main$tableCell = F2(
-	function (attributes, child) {
-		return A2(
+var $mdgriffith$elm_ui$Internal$Flag$fontAlignment = $mdgriffith$elm_ui$Internal$Flag$flag(12);
+var $mdgriffith$elm_ui$Element$Font$center = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontAlignment, $mdgriffith$elm_ui$Internal$Style$classes.textCenter);
+var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
+	return {$: 'AlignX', a: a};
+};
+var $mdgriffith$elm_ui$Internal$Model$CenterX = {$: 'CenterX'};
+var $mdgriffith$elm_ui$Element$centerX = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$CenterX);
+var $mdgriffith$elm_ui$Internal$Model$Fill = function (a) {
+	return {$: 'Fill', a: a};
+};
+var $mdgriffith$elm_ui$Element$fill = $mdgriffith$elm_ui$Internal$Model$Fill(1);
+var $author$project$Main$centeredHeader = function (txt) {
+	return A2(
+		$author$project$Main$cell,
+		_List_fromArray(
+			[
+				$author$project$Main$bottomBorder,
+				$mdgriffith$elm_ui$Element$Font$bold,
+				$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill)
+			]),
+		A2(
 			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
-					A2($mdgriffith$elm_ui$Element$paddingXY, 20, 6)
-				]),
-			A2(
-				$mdgriffith$elm_ui$Element$el,
-				_Utils_ap(
-					attributes,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$alignTop])),
-				child));
-	});
-var $mdgriffith$elm_ui$Internal$Model$Text = function (a) {
-	return {$: 'Text', a: a};
+				[$mdgriffith$elm_ui$Element$centerX, $mdgriffith$elm_ui$Element$alignBottom, $mdgriffith$elm_ui$Element$Font$center]),
+			$mdgriffith$elm_ui$Element$text(txt)));
 };
-var $mdgriffith$elm_ui$Element$text = function (content) {
-	return $mdgriffith$elm_ui$Internal$Model$Text(content);
-};
+var $mdgriffith$elm_ui$Internal$Model$Empty = {$: 'Empty'};
+var $mdgriffith$elm_ui$Element$none = $mdgriffith$elm_ui$Internal$Model$Empty;
+var $author$project$Main$topBorder = $mdgriffith$elm_ui$Element$Border$widthEach(
+	_Utils_update(
+		$author$project$Main$noBorders,
+		{top: 2}));
 var $author$project$Main$codeColumn = function (row) {
 	switch (row.$) {
-		case 'Single':
-			var record = row.a;
+		case 'AverageModuleRow':
+			var r = row.a;
 			return A2(
-				$author$project$Main$tableCell,
-				_List_fromArray(
-					[$mdgriffith$elm_ui$Element$centerX]),
-				$mdgriffith$elm_ui$Element$text(
-					function ($) {
-						return $.code;
-					}(record)));
-		case 'Header':
-			var record = row.a;
+				$author$project$Main$cell,
+				_List_Nil,
+				$mdgriffith$elm_ui$Element$text(r.code));
+		case 'PointsModuleRow':
+			var r = row.a;
 			return A2(
-				$author$project$Main$tableCell,
+				$author$project$Main$cell,
+				_List_Nil,
+				$mdgriffith$elm_ui$Element$text(r.code));
+		case 'SingleGrade345ModuleRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_Nil,
+				$mdgriffith$elm_ui$Element$text(r.code));
+		case 'SumRow':
+			return A2(
+				$author$project$Main$cell,
 				_List_fromArray(
-					[$mdgriffith$elm_ui$Element$centerX]),
-				$mdgriffith$elm_ui$Element$text(
-					function ($) {
-						return $.code;
-					}(record)));
-		case 'Part':
-			return $mdgriffith$elm_ui$Element$none;
+					[$author$project$Main$topBorder]),
+				$mdgriffith$elm_ui$Element$none);
 		default:
-			return A2($author$project$Main$sumCell, _List_Nil, $mdgriffith$elm_ui$Element$none);
+			return $mdgriffith$elm_ui$Element$none;
 	}
 };
-var $author$project$Main$ModuleAndPartIndex = F2(
-	function (a, b) {
-		return {$: 'ModuleAndPartIndex', a: a, b: b};
-	});
-var $author$project$Main$ModuleIndex = function (a) {
-	return {$: 'ModuleIndex', a: a};
-};
-var $mdgriffith$elm_ui$Internal$Model$Right = {$: 'Right'};
-var $mdgriffith$elm_ui$Element$alignRight = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Right);
-var $author$project$Main$Fail = {$: 'Fail'};
-var $author$project$Main$First = {$: 'First'};
-var $author$project$Main$Five = {$: 'Five'};
-var $author$project$Main$Four = {$: 'Four'};
-var $author$project$Main$Last = {$: 'Last'};
-var $author$project$Main$Middle = {$: 'Middle'};
-var $author$project$Main$SetModuleGrade = F2(
-	function (a, b) {
-		return {$: 'SetModuleGrade', a: a, b: b};
-	});
-var $author$project$Main$SetPartGrade = F3(
+var $author$project$Main$SetAverageGrade345 = F3(
 	function (a, b, c) {
-		return {$: 'SetPartGrade', a: a, b: b, c: c};
+		return {$: 'SetAverageGrade345', a: a, b: b, c: c};
 	});
-var $elm$core$Maybe$andThen = F2(
-	function (callback, maybeValue) {
-		if (maybeValue.$ === 'Just') {
-			var value = maybeValue.a;
-			return callback(value);
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
+var $author$project$Main$SetSinglGrade345 = F2(
+	function (a, b) {
+		return {$: 'SetSinglGrade345', a: a, b: b};
 	});
-var $author$project$Main$getGrades = function (grades) {
-	if (grades.$ === 'Grades') {
-		var gs = grades.a;
-		return $elm$core$Maybe$Just(gs);
-	} else {
-		return $elm$core$Maybe$Nothing;
-	}
+var $mdgriffith$elm_ui$Element$rgb255 = F3(
+	function (red, green, blue) {
+		return A4($mdgriffith$elm_ui$Internal$Model$Rgba, red / 255, green / 255, blue / 255, 1);
+	});
+var $author$project$Main$color = {
+	black: A3($mdgriffith$elm_ui$Element$rgb255, 0, 0, 0),
+	blue: A3($mdgriffith$elm_ui$Element$rgb255, 114, 159, 207),
+	darkCharcoal: A3($mdgriffith$elm_ui$Element$rgb255, 46, 52, 54),
+	gray: A3($mdgriffith$elm_ui$Element$rgb255, 127, 127, 127),
+	green: A3($mdgriffith$elm_ui$Element$rgb255, 0, 128, 0),
+	lightBlue: A3($mdgriffith$elm_ui$Element$rgb255, 197, 232, 247),
+	lightGrey: A3($mdgriffith$elm_ui$Element$rgb255, 224, 224, 224),
+	red: A3($mdgriffith$elm_ui$Element$rgb255, 255, 0, 0),
+	white: A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255)
 };
-var $author$project$Main$getSingleGrade = function (grade) {
-	if (grade.$ === 'SingleGrade') {
-		var g = grade.a;
-		return $elm$core$Maybe$Just(g);
-	} else {
-		return $elm$core$Maybe$Nothing;
-	}
+var $elm$core$Basics$composeR = F3(
+	function (f, g, x) {
+		return g(
+			f(x));
+	});
+var $author$project$Main$grade345ToString = function (grade) {
+	return A2(
+		$elm$core$Maybe$withDefault,
+		'F',
+		A2(
+			$elm$core$Maybe$map,
+			A2($elm$core$Basics$composeR, $author$project$Main$grade345ToInt, $elm$core$String$fromInt),
+			grade));
 };
+var $mdgriffith$elm_ui$Element$Input$HiddenLabel = function (a) {
+	return {$: 'HiddenLabel', a: a};
+};
+var $mdgriffith$elm_ui$Element$Input$labelHidden = $mdgriffith$elm_ui$Element$Input$HiddenLabel;
 var $mdgriffith$elm_ui$Element$Input$Selected = {$: 'Selected'};
+var $author$project$Main$borders = F2(
+	function (width, position) {
+		return $mdgriffith$elm_ui$Element$Border$widthEach(
+			function () {
+				switch (position.$) {
+					case 'Single':
+						return {bottom: width, left: width, right: width, top: width};
+					case 'First':
+						return {bottom: width, left: width, right: width, top: width};
+					case 'Middle':
+						return {bottom: width, left: 0, right: width, top: width};
+					default:
+						return {bottom: width, left: 0, right: width, top: width};
+				}
+			}());
+	});
 var $mdgriffith$elm_ui$Internal$Model$CenterY = {$: 'CenterY'};
 var $mdgriffith$elm_ui$Element$centerY = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$CenterY);
 var $mdgriffith$elm_ui$Element$Background$color = function (clr) {
@@ -11617,21 +12433,37 @@ var $mdgriffith$elm_ui$Element$Font$color = function (fontColor) {
 			'color',
 			fontColor));
 };
-var $mdgriffith$elm_ui$Element$rgb255 = F3(
-	function (red, green, blue) {
-		return A4($mdgriffith$elm_ui$Internal$Model$Rgba, red / 255, green / 255, blue / 255, 1);
-	});
-var $author$project$Main$color = {
-	black: A3($mdgriffith$elm_ui$Element$rgb255, 0, 0, 0),
-	blue: A3($mdgriffith$elm_ui$Element$rgb255, 114, 159, 207),
-	darkCharcoal: A3($mdgriffith$elm_ui$Element$rgb255, 46, 52, 54),
-	gray: A3($mdgriffith$elm_ui$Element$rgb255, 127, 127, 127),
-	green: A3($mdgriffith$elm_ui$Element$rgb255, 0, 128, 0),
-	lightBlue: A3($mdgriffith$elm_ui$Element$rgb255, 197, 232, 247),
-	lightGrey: A3($mdgriffith$elm_ui$Element$rgb255, 224, 224, 224),
-	red: A3($mdgriffith$elm_ui$Element$rgb255, 255, 0, 0),
-	white: A3($mdgriffith$elm_ui$Element$rgb255, 255, 255, 255)
+var $mdgriffith$elm_ui$Internal$Flag$borderRound = $mdgriffith$elm_ui$Internal$Flag$flag(17);
+var $mdgriffith$elm_ui$Element$Border$roundEach = function (_v0) {
+	var topLeft = _v0.topLeft;
+	var topRight = _v0.topRight;
+	var bottomLeft = _v0.bottomLeft;
+	var bottomRight = _v0.bottomRight;
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$borderRound,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$Single,
+			'br-' + ($elm$core$String$fromInt(topLeft) + ('-' + ($elm$core$String$fromInt(topRight) + ($elm$core$String$fromInt(bottomLeft) + ('-' + $elm$core$String$fromInt(bottomRight)))))),
+			'border-radius',
+			$elm$core$String$fromInt(topLeft) + ('px ' + ($elm$core$String$fromInt(topRight) + ('px ' + ($elm$core$String$fromInt(bottomRight) + ('px ' + ($elm$core$String$fromInt(bottomLeft) + 'px'))))))));
 };
+var $author$project$Main$corners = F2(
+	function (radius, position) {
+		return $mdgriffith$elm_ui$Element$Border$roundEach(
+			function () {
+				switch (position.$) {
+					case 'Single':
+						return {bottomLeft: radius, bottomRight: radius, topLeft: radius, topRight: radius};
+					case 'First':
+						return {bottomLeft: radius, bottomRight: 0, topLeft: radius, topRight: 0};
+					case 'Middle':
+						return {bottomLeft: 0, bottomRight: 0, topLeft: 0, topRight: 0};
+					default:
+						return {bottomLeft: 0, bottomRight: radius, topLeft: 0, topRight: radius};
+				}
+			}());
+	});
 var $mdgriffith$elm_ui$Internal$Model$paddingName = F4(
 	function (top, right, bottom, left) {
 		return 'pad-' + ($elm$core$String$fromInt(top) + ('-' + ($elm$core$String$fromInt(right) + ('-' + ($elm$core$String$fromInt(bottom) + ('-' + $elm$core$String$fromInt(left)))))));
@@ -11666,51 +12498,8 @@ var $mdgriffith$elm_ui$Element$paddingEach = function (_v0) {
 				left));
 	}
 };
-var $mdgriffith$elm_ui$Internal$Flag$borderRound = $mdgriffith$elm_ui$Internal$Flag$flag(17);
-var $mdgriffith$elm_ui$Element$Border$roundEach = function (_v0) {
-	var topLeft = _v0.topLeft;
-	var topRight = _v0.topRight;
-	var bottomLeft = _v0.bottomLeft;
-	var bottomRight = _v0.bottomRight;
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$borderRound,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$Single,
-			'br-' + ($elm$core$String$fromInt(topLeft) + ('-' + ($elm$core$String$fromInt(topRight) + ($elm$core$String$fromInt(bottomLeft) + ('-' + $elm$core$String$fromInt(bottomRight)))))),
-			'border-radius',
-			$elm$core$String$fromInt(topLeft) + ('px ' + ($elm$core$String$fromInt(topRight) + ('px ' + ($elm$core$String$fromInt(bottomRight) + ('px ' + ($elm$core$String$fromInt(bottomLeft) + 'px'))))))));
-};
-var $mdgriffith$elm_ui$Element$Font$size = function (i) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$fontSize,
-		$mdgriffith$elm_ui$Internal$Model$FontSize(i));
-};
-var $author$project$Main$gradeButton = F4(
-	function (grade, position, label, state) {
-		var r = 4;
-		var corners = function () {
-			switch (position.$) {
-				case 'First':
-					return {bottomLeft: r, bottomRight: 0, topLeft: r, topRight: 0};
-				case 'Middle':
-					return {bottomLeft: 0, bottomRight: 0, topLeft: 0, topRight: 0};
-				default:
-					return {bottomLeft: 0, bottomRight: r, topLeft: 0, topRight: r};
-			}
-		}();
-		var b = 1;
-		var borders = function () {
-			switch (position.$) {
-				case 'First':
-					return {bottom: b, left: b, right: b, top: b};
-				case 'Middle':
-					return {bottom: b, left: 0, right: b, top: b};
-				default:
-					return {bottom: b, left: 0, right: b, top: b};
-			}
-		}();
+var $author$project$Main$button = F4(
+	function (position, c, label, state) {
 		return A2(
 			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
@@ -11718,21 +12507,11 @@ var $author$project$Main$gradeButton = F4(
 					$mdgriffith$elm_ui$Element$paddingEach(
 					{bottom: 3, left: 6, right: 6, top: 3}),
 					$mdgriffith$elm_ui$Element$Font$size(12),
-					$mdgriffith$elm_ui$Element$Border$roundEach(corners),
-					$mdgriffith$elm_ui$Element$Border$widthEach(borders),
+					A2($author$project$Main$corners, 4, position),
+					A2($author$project$Main$borders, 1, position),
 					$mdgriffith$elm_ui$Element$Border$color($author$project$Main$color.gray),
 					$mdgriffith$elm_ui$Element$Background$color(
-					function () {
-						if (_Utils_eq(state, $mdgriffith$elm_ui$Element$Input$Selected)) {
-							if (grade.$ === 'Fail') {
-								return $author$project$Main$color.red;
-							} else {
-								return $author$project$Main$color.green;
-							}
-						} else {
-							return $author$project$Main$color.white;
-						}
-					}()),
+					_Utils_eq(state, $mdgriffith$elm_ui$Element$Input$Selected) ? ((label === 'F') ? $author$project$Main$color.red : c) : $author$project$Main$color.white),
 					$mdgriffith$elm_ui$Element$Font$color(
 					_Utils_eq(state, $mdgriffith$elm_ui$Element$Input$Selected) ? $author$project$Main$color.white : $author$project$Main$color.black)
 				]),
@@ -11742,22 +12521,6 @@ var $author$project$Main$gradeButton = F4(
 					[$mdgriffith$elm_ui$Element$centerX, $mdgriffith$elm_ui$Element$centerY]),
 				$mdgriffith$elm_ui$Element$text(label)));
 	});
-var $author$project$Main$gradeToString = function (grade) {
-	switch (grade.$) {
-		case 'Fail':
-			return 'F';
-		case 'Three':
-			return '3';
-		case 'Four':
-			return '4';
-		default:
-			return '5';
-	}
-};
-var $mdgriffith$elm_ui$Element$Input$HiddenLabel = function (a) {
-	return {$: 'HiddenLabel', a: a};
-};
-var $mdgriffith$elm_ui$Element$Input$labelHidden = $mdgriffith$elm_ui$Element$Input$HiddenLabel;
 var $mdgriffith$elm_ui$Element$Input$Option = F2(
 	function (a, b) {
 		return {$: 'Option', a: a, b: b};
@@ -11765,6 +12528,45 @@ var $mdgriffith$elm_ui$Element$Input$Option = F2(
 var $mdgriffith$elm_ui$Element$Input$optionWith = F2(
 	function (val, view) {
 		return A2($mdgriffith$elm_ui$Element$Input$Option, val, view);
+	});
+var $author$project$Main$mkOption = F3(
+	function (valueToString, c, _v0) {
+		var position = _v0.a;
+		var value = _v0.b;
+		return A2(
+			$mdgriffith$elm_ui$Element$Input$optionWith,
+			value,
+			A3(
+				$author$project$Main$button,
+				position,
+				c,
+				valueToString(value)));
+	});
+var $author$project$Main$First = {$: 'First'};
+var $author$project$Main$Last = {$: 'Last'};
+var $author$project$Main$Middle = {$: 'Middle'};
+var $author$project$Main$Single = {$: 'Single'};
+var $author$project$Main$positions = function (list) {
+	var n = $elm$core$List$length(list);
+	var indexToPostion = function (i) {
+		return (!i) ? ((n === 1) ? $author$project$Main$Single : $author$project$Main$First) : (_Utils_eq(i, n - 1) ? $author$project$Main$Last : $author$project$Main$Middle);
+	};
+	return A2(
+		$elm$core$List$indexedMap,
+		F2(
+			function (i, x) {
+				return _Utils_Tuple2(
+					indexToPostion(i),
+					x);
+			}),
+		list);
+};
+var $author$project$Main$mkOptions = F3(
+	function (values, valueToString, c) {
+		return A2(
+			$elm$core$List$map,
+			A2($author$project$Main$mkOption, valueToString, c),
+			$author$project$Main$positions(values));
 	});
 var $mdgriffith$elm_ui$Element$Input$Row = {$: 'Row'};
 var $mdgriffith$elm_ui$Element$Input$AfterFound = {$: 'AfterFound'};
@@ -11778,8 +12580,6 @@ var $mdgriffith$elm_ui$Internal$Model$Describe = function (a) {
 };
 var $mdgriffith$elm_ui$Internal$Model$LivePolite = {$: 'LivePolite'};
 var $mdgriffith$elm_ui$Element$Region$announce = $mdgriffith$elm_ui$Internal$Model$Describe($mdgriffith$elm_ui$Internal$Model$LivePolite);
-var $mdgriffith$elm_ui$Internal$Model$AsRow = {$: 'AsRow'};
-var $mdgriffith$elm_ui$Internal$Model$asRow = $mdgriffith$elm_ui$Internal$Model$AsRow;
 var $mdgriffith$elm_ui$Element$Input$applyLabel = F3(
 	function (attrs, label, input) {
 		if (label.$ === 'HiddenLabel') {
@@ -12243,574 +13043,153 @@ var $mdgriffith$elm_ui$Element$Input$radioHelper = F3(
 			optionArea);
 	});
 var $mdgriffith$elm_ui$Element$Input$radioRow = $mdgriffith$elm_ui$Element$Input$radioHelper($mdgriffith$elm_ui$Element$Input$Row);
-var $mdgriffith$elm_ui$Element$Border$rounded = function (radius) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$borderRound,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$Single,
-			'br-' + $elm$core$String$fromInt(radius),
-			'border-radius',
-			$elm$core$String$fromInt(radius) + 'px'));
-};
-var $author$project$Main$gradeButtons = F2(
-	function (gradeIndex, modules) {
-		var option = F2(
-			function (g, position) {
-				return A2(
-					$mdgriffith$elm_ui$Element$Input$optionWith,
-					g,
-					A3(
-						$author$project$Main$gradeButton,
-						g,
-						position,
-						$author$project$Main$gradeToString(g)));
-			});
-		var msg = function () {
-			if (gradeIndex.$ === 'ModuleIndex') {
-				var moduleIndex = gradeIndex.a;
-				return $author$project$Main$SetModuleGrade(moduleIndex);
-			} else {
-				var moduleIndex = gradeIndex.a;
-				var partIndex = gradeIndex.b;
-				return A2($author$project$Main$SetPartGrade, moduleIndex, partIndex);
-			}
-		}();
-		var grade = function () {
-			if (gradeIndex.$ === 'ModuleIndex') {
-				var i = gradeIndex.a;
-				return A2(
-					$elm$core$Maybe$andThen,
-					$author$project$Main$getSingleGrade,
-					A2(
-						$elm$core$Maybe$map,
-						function ($) {
-							return $.grades;
-						},
-						A2($elm$core$Array$get, i, modules)));
-			} else {
-				var m = gradeIndex.a;
-				var p = gradeIndex.b;
-				return A2(
-					$elm$core$Maybe$map,
-					function ($) {
-						return $.grade;
-					},
-					A2(
-						$elm$core$Maybe$andThen,
-						$elm$core$Array$get(p),
-						A2(
-							$elm$core$Maybe$andThen,
-							$author$project$Main$getGrades,
-							A2(
-								$elm$core$Maybe$map,
-								function ($) {
-									return $.grades;
-								},
-								A2($elm$core$Array$get, m, modules)))));
-			}
-		}();
+var $author$project$Main$grade345Buttons = F2(
+	function (selected, msg) {
 		return A2(
 			$mdgriffith$elm_ui$Element$Input$radioRow,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$Border$rounded(6)
-				]),
+			_List_Nil,
 			{
 				label: $mdgriffith$elm_ui$Element$Input$labelHidden('Select grade'),
 				onChange: msg,
-				options: _List_fromArray(
-					[
-						A2(option, $author$project$Main$Fail, $author$project$Main$First),
-						A2(option, $author$project$Main$Three, $author$project$Main$Middle),
-						A2(option, $author$project$Main$Four, $author$project$Main$Middle),
-						A2(option, $author$project$Main$Five, $author$project$Main$Last)
-					]),
-				selected: grade
+				options: A3(
+					$author$project$Main$mkOptions,
+					_List_fromArray(
+						[
+							$elm$core$Maybe$Nothing,
+							$elm$core$Maybe$Just($author$project$Main$Three),
+							$elm$core$Maybe$Just($author$project$Main$Four),
+							$elm$core$Maybe$Just($author$project$Main$Five)
+						]),
+					$author$project$Main$grade345ToString,
+					$author$project$Main$color.green),
+				selected: $elm$core$Maybe$Just(selected)
 			});
 	});
-var $author$project$Main$gradeToMaybeFloat = function (grade) {
-	switch (grade.$) {
-		case 'Fail':
-			return $elm$core$Maybe$Nothing;
-		case 'Three':
-			return $elm$core$Maybe$Just(3);
-		case 'Four':
-			return $elm$core$Maybe$Just(4);
-		default:
-			return $elm$core$Maybe$Just(5);
-	}
-};
-var $elm$core$Array$length = function (_v0) {
-	var len = _v0.a;
-	return len;
-};
-var $elm$core$List$sum = function (numbers) {
-	return A3($elm$core$List$foldl, $elm$core$Basics$add, 0, numbers);
-};
-var $elm_community$maybe_extra$Maybe$Extra$traverseHelp = F3(
-	function (f, list, acc) {
-		traverseHelp:
-		while (true) {
-			if (list.b) {
-				var head = list.a;
-				var tail = list.b;
-				var _v1 = f(head);
-				if (_v1.$ === 'Just') {
-					var a = _v1.a;
-					var $temp$f = f,
-						$temp$list = tail,
-						$temp$acc = A2($elm$core$List$cons, a, acc);
-					f = $temp$f;
-					list = $temp$list;
-					acc = $temp$acc;
-					continue traverseHelp;
-				} else {
-					return $elm$core$Maybe$Nothing;
-				}
-			} else {
-				return $elm$core$Maybe$Just(
-					$elm$core$List$reverse(acc));
-			}
-		}
+var $author$project$Main$SetMandatoryPass = F3(
+	function (a, b, c) {
+		return {$: 'SetMandatoryPass', a: a, b: b, c: c};
 	});
-var $elm_community$maybe_extra$Maybe$Extra$traverse = F2(
-	function (f, list) {
-		return A3($elm_community$maybe_extra$Maybe$Extra$traverseHelp, f, list, _List_Nil);
-	});
-var $author$project$Main$averageGrade = function (grades) {
-	if (grades.$ === 'SingleGrade') {
-		var g = grades.a;
-		return $author$project$Main$gradeToMaybeFloat(g);
-	} else {
-		var gs = grades.a;
+var $author$project$Main$boolToFailPass = function (bool) {
+	return bool ? 'P' : 'F';
+};
+var $author$project$Main$mandatoryPassButtons = F3(
+	function (moduleIndex, assignmentIndex, selected) {
 		return A2(
+			$mdgriffith$elm_ui$Element$Input$radioRow,
+			_List_Nil,
+			{
+				label: $mdgriffith$elm_ui$Element$Input$labelHidden('Select mandaatory fail or pass'),
+				onChange: A2($author$project$Main$SetMandatoryPass, moduleIndex, assignmentIndex),
+				options: A3(
+					$author$project$Main$mkOptions,
+					_List_fromArray(
+						[false, true]),
+					$author$project$Main$boolToFailPass,
+					$author$project$Main$color.green),
+				selected: $elm$core$Maybe$Just(selected)
+			});
+	});
+var $author$project$Main$viewModuleGrade345 = function (grade) {
+	return A2(
+		$elm$core$Maybe$withDefault,
+		$mdgriffith$elm_ui$Element$text('No grade'),
+		A2(
 			$elm$core$Maybe$map,
-			function (tot) {
-				return tot / $elm$core$Array$length(gs);
+			function (g) {
+				return $mdgriffith$elm_ui$Element$text(
+					$author$project$Main$grade345ToString(
+						$elm$core$Maybe$Just(g.grade)) + (' (average ' + (A2($myrho$elm_round$Round$round, 2, g.average) + ')')));
 			},
+			grade));
+};
+var $author$project$Main$viewPointsModuleGrade = F3(
+	function (grade, points, max) {
+		return A2(
+			$elm$core$Maybe$withDefault,
+			'No grade',
 			A2(
 				$elm$core$Maybe$map,
-				$elm$core$List$sum,
-				A2(
-					$elm_community$maybe_extra$Maybe$Extra$traverse,
-					$author$project$Main$gradeToMaybeFloat,
-					A2(
-						$elm$core$List$map,
-						function ($) {
-							return $.grade;
-						},
-						$elm$core$Array$toList(gs)))));
-	}
-};
-var $author$project$Main$averageModuleGrade = function (m) {
-	return $author$project$Main$averageGrade(m.grades);
-};
-var $author$project$Main$averageModuleGradeFromIndex = F2(
-	function (moduleIndex, modules) {
-		return A2(
-			$elm$core$Maybe$map,
-			$author$project$Main$averageModuleGrade,
-			A2($elm$core$Array$get, moduleIndex, modules));
-	});
-var $elm$core$Basics$abs = function (n) {
-	return (n < 0) ? (-n) : n;
-};
-var $elm$core$String$foldr = _String_foldr;
-var $elm$core$String$toList = function (string) {
-	return A3($elm$core$String$foldr, $elm$core$List$cons, _List_Nil, string);
-};
-var $myrho$elm_round$Round$addSign = F2(
-	function (signed, str) {
-		var isNotZero = A2(
-			$elm$core$List$any,
-			function (c) {
-				return (!_Utils_eq(
-					c,
-					_Utils_chr('0'))) && (!_Utils_eq(
-					c,
-					_Utils_chr('.')));
-			},
-			$elm$core$String$toList(str));
-		return _Utils_ap(
-			(signed && isNotZero) ? '-' : '',
-			str);
-	});
-var $elm$core$String$cons = _String_cons;
-var $elm$core$Char$fromCode = _Char_fromCode;
-var $myrho$elm_round$Round$increaseNum = function (_v0) {
-	var head = _v0.a;
-	var tail = _v0.b;
-	if (_Utils_eq(
-		head,
-		_Utils_chr('9'))) {
-		var _v1 = $elm$core$String$uncons(tail);
-		if (_v1.$ === 'Nothing') {
-			return '01';
-		} else {
-			var headtail = _v1.a;
-			return A2(
-				$elm$core$String$cons,
-				_Utils_chr('0'),
-				$myrho$elm_round$Round$increaseNum(headtail));
-		}
-	} else {
-		var c = $elm$core$Char$toCode(head);
-		return ((c >= 48) && (c < 57)) ? A2(
-			$elm$core$String$cons,
-			$elm$core$Char$fromCode(c + 1),
-			tail) : '0';
-	}
-};
-var $elm$core$Basics$isInfinite = _Basics_isInfinite;
-var $elm$core$Basics$isNaN = _Basics_isNaN;
-var $elm$core$String$fromChar = function (_char) {
-	return A2($elm$core$String$cons, _char, '');
-};
-var $elm$core$Bitwise$shiftRightBy = _Bitwise_shiftRightBy;
-var $elm$core$String$repeatHelp = F3(
-	function (n, chunk, result) {
-		return (n <= 0) ? result : A3(
-			$elm$core$String$repeatHelp,
-			n >> 1,
-			_Utils_ap(chunk, chunk),
-			(!(n & 1)) ? result : _Utils_ap(result, chunk));
-	});
-var $elm$core$String$repeat = F2(
-	function (n, chunk) {
-		return A3($elm$core$String$repeatHelp, n, chunk, '');
-	});
-var $elm$core$String$padRight = F3(
-	function (n, _char, string) {
-		return _Utils_ap(
-			string,
-			A2(
-				$elm$core$String$repeat,
-				n - $elm$core$String$length(string),
-				$elm$core$String$fromChar(_char)));
-	});
-var $elm$core$String$reverse = _String_reverse;
-var $myrho$elm_round$Round$splitComma = function (str) {
-	var _v0 = A2($elm$core$String$split, '.', str);
-	if (_v0.b) {
-		if (_v0.b.b) {
-			var before = _v0.a;
-			var _v1 = _v0.b;
-			var after = _v1.a;
-			return _Utils_Tuple2(before, after);
-		} else {
-			var before = _v0.a;
-			return _Utils_Tuple2(before, '0');
-		}
-	} else {
-		return _Utils_Tuple2('0', '0');
-	}
-};
-var $myrho$elm_round$Round$toDecimal = function (fl) {
-	var _v0 = A2(
-		$elm$core$String$split,
-		'e',
-		$elm$core$String$fromFloat(
-			$elm$core$Basics$abs(fl)));
-	if (_v0.b) {
-		if (_v0.b.b) {
-			var num = _v0.a;
-			var _v1 = _v0.b;
-			var exp = _v1.a;
-			var e = A2(
-				$elm$core$Maybe$withDefault,
-				0,
-				$elm$core$String$toInt(
-					A2($elm$core$String$startsWith, '+', exp) ? A2($elm$core$String$dropLeft, 1, exp) : exp));
-			var _v2 = $myrho$elm_round$Round$splitComma(num);
-			var before = _v2.a;
-			var after = _v2.b;
-			var total = _Utils_ap(before, after);
-			var zeroed = (e < 0) ? A2(
-				$elm$core$Maybe$withDefault,
-				'0',
+				function (s) {
+					return s + (' (' + ($elm$core$String$fromInt(points) + (' of ' + ($elm$core$String$fromInt(max) + ' points)'))));
+				},
 				A2(
 					$elm$core$Maybe$map,
-					function (_v3) {
-						var a = _v3.a;
-						var b = _v3.b;
-						return a + ('.' + b);
-					},
-					A2(
-						$elm$core$Maybe$map,
-						$elm$core$Tuple$mapFirst($elm$core$String$fromChar),
-						$elm$core$String$uncons(
-							_Utils_ap(
-								A2(
-									$elm$core$String$repeat,
-									$elm$core$Basics$abs(e),
-									'0'),
-								total))))) : A3(
-				$elm$core$String$padRight,
-				e + 1,
-				_Utils_chr('0'),
-				total);
-			return _Utils_ap(
-				(fl < 0) ? '-' : '',
-				zeroed);
-		} else {
-			var num = _v0.a;
-			return _Utils_ap(
-				(fl < 0) ? '-' : '',
-				num);
-		}
-	} else {
-		return '';
+					A2($elm$core$Basics$composeR, $author$project$Main$grade345ToInt, $elm$core$String$fromInt),
+					grade)));
+	});
+var $author$project$Main$gradeColumn = function (row) {
+	switch (row.$) {
+		case 'AverageModuleRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_Nil,
+				$author$project$Main$viewModuleGrade345(r.grade));
+		case 'AverageAssignmentRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_Nil,
+				A2(
+					$author$project$Main$grade345Buttons,
+					r.grade,
+					A2($author$project$Main$SetAverageGrade345, r.moduleIndex, r.assignmentIndex)));
+		case 'PointsModuleRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_Nil,
+				$mdgriffith$elm_ui$Element$text(
+					A3($author$project$Main$viewPointsModuleGrade, r.grade, r.points, r.max)));
+		case 'PointsAssignmentRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_Nil,
+				A3($author$project$Main$mandatoryPassButtons, r.moduleIndex, r.assignmentIndex, r.mandatoryPass));
+		case 'SingleGrade345ModuleRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_Nil,
+				A2(
+					$author$project$Main$grade345Buttons,
+					r.grade,
+					$author$project$Main$SetSinglGrade345(r.moduleIndex)));
+		default:
+			return A2(
+				$author$project$Main$cell,
+				_List_fromArray(
+					[$author$project$Main$topBorder]),
+				$mdgriffith$elm_ui$Element$none);
 	}
 };
-var $myrho$elm_round$Round$roundFun = F3(
-	function (functor, s, fl) {
-		if ($elm$core$Basics$isInfinite(fl) || $elm$core$Basics$isNaN(fl)) {
-			return $elm$core$String$fromFloat(fl);
-		} else {
-			var signed = fl < 0;
-			var _v0 = $myrho$elm_round$Round$splitComma(
-				$myrho$elm_round$Round$toDecimal(
-					$elm$core$Basics$abs(fl)));
-			var before = _v0.a;
-			var after = _v0.b;
-			var r = $elm$core$String$length(before) + s;
-			var normalized = _Utils_ap(
-				A2($elm$core$String$repeat, (-r) + 1, '0'),
-				A3(
-					$elm$core$String$padRight,
-					r,
-					_Utils_chr('0'),
-					_Utils_ap(before, after)));
-			var totalLen = $elm$core$String$length(normalized);
-			var roundDigitIndex = A2($elm$core$Basics$max, 1, r);
-			var increase = A2(
-				functor,
-				signed,
-				A3($elm$core$String$slice, roundDigitIndex, totalLen, normalized));
-			var remains = A3($elm$core$String$slice, 0, roundDigitIndex, normalized);
-			var num = increase ? $elm$core$String$reverse(
-				A2(
-					$elm$core$Maybe$withDefault,
-					'1',
-					A2(
-						$elm$core$Maybe$map,
-						$myrho$elm_round$Round$increaseNum,
-						$elm$core$String$uncons(
-							$elm$core$String$reverse(remains))))) : remains;
-			var numLen = $elm$core$String$length(num);
-			var numZeroed = (num === '0') ? num : ((s <= 0) ? _Utils_ap(
-				num,
-				A2(
-					$elm$core$String$repeat,
-					$elm$core$Basics$abs(s),
-					'0')) : ((_Utils_cmp(
-				s,
-				$elm$core$String$length(after)) < 0) ? (A3($elm$core$String$slice, 0, numLen - s, num) + ('.' + A3($elm$core$String$slice, numLen - s, numLen, num))) : _Utils_ap(
-				before + '.',
-				A3(
-					$elm$core$String$padRight,
-					s,
-					_Utils_chr('0'),
-					after))));
-			return A2($myrho$elm_round$Round$addSign, signed, numZeroed);
-		}
-	});
-var $myrho$elm_round$Round$round = $myrho$elm_round$Round$roundFun(
-	F2(
-		function (signed, str) {
-			var _v0 = $elm$core$String$uncons(str);
-			if (_v0.$ === 'Nothing') {
-				return false;
-			} else {
-				if ('5' === _v0.a.a.valueOf()) {
-					if (_v0.a.b === '') {
-						var _v1 = _v0.a;
-						return !signed;
-					} else {
-						var _v2 = _v0.a;
-						return true;
-					}
-				} else {
-					var _v3 = _v0.a;
-					var _int = _v3.a;
-					return function (i) {
-						return ((i > 53) && signed) || ((i >= 53) && (!signed));
-					}(
-						$elm$core$Char$toCode(_int));
-				}
-			}
-		}));
-var $author$project$Main$viewAverageModuleGrade = F2(
-	function (moduleIndex, modules) {
-		var _v0 = A2($author$project$Main$averageModuleGradeFromIndex, moduleIndex, modules);
-		if (_v0.$ === 'Nothing') {
-			return $mdgriffith$elm_ui$Element$text(
-				'Error: Invalid module index ' + $elm$core$String$fromInt(moduleIndex));
-		} else {
-			if (_v0.a.$ === 'Nothing') {
-				var _v1 = _v0.a;
-				return $mdgriffith$elm_ui$Element$text('No grade');
-			} else {
-				var avg = _v0.a.a;
-				return $mdgriffith$elm_ui$Element$text(
-					$elm$core$String$fromInt(
-						$elm$core$Basics$round(avg)) + (' (' + (A2($myrho$elm_round$Round$round, 2, avg) + ')')));
-			}
-		}
-	});
-var $author$project$Main$gradeColumn = F2(
-	function (modules, r) {
-		switch (r.$) {
-			case 'Single':
-				var mod = r.a;
-				return A2(
-					$author$project$Main$tableCell,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$centerX]),
-					A2(
-						$author$project$Main$gradeButtons,
-						$author$project$Main$ModuleIndex(mod.moduleIndex),
-						modules));
-			case 'Header':
-				var h = r.a;
-				return A2(
-					$author$project$Main$tableCell,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$centerX]),
-					A2($author$project$Main$viewAverageModuleGrade, h.moduleIndex, modules));
-			case 'Part':
-				var part = r.a;
-				return A2(
-					$author$project$Main$tableCell,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$centerX]),
-					A2(
-						$author$project$Main$gradeButtons,
-						A2($author$project$Main$ModuleAndPartIndex, part.moduleIndex, part.partIndex),
-						modules));
-			default:
-				return A2(
-					$author$project$Main$sumCell,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$Font$bold, $mdgriffith$elm_ui$Element$alignRight]),
-					$mdgriffith$elm_ui$Element$text('Sum'));
-		}
-	});
-var $elm$core$Basics$always = F2(
-	function (a, _v0) {
-		return a;
-	});
-var $mdgriffith$elm_ui$Internal$Model$unstyled = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Unstyled, $elm$core$Basics$always);
-var $mdgriffith$elm_ui$Element$html = $mdgriffith$elm_ui$Internal$Model$unstyled;
-var $elm$core$List$intersperse = F2(
-	function (sep, xs) {
-		if (!xs.b) {
-			return _List_Nil;
-		} else {
-			var hd = xs.a;
-			var tl = xs.b;
-			var step = F2(
-				function (x, rest) {
-					return A2(
-						$elm$core$List$cons,
-						sep,
-						A2($elm$core$List$cons, x, rest));
-				});
-			var spersed = A3($elm$core$List$foldr, step, _List_Nil, tl);
-			return A2($elm$core$List$cons, hd, spersed);
-		}
-	});
-var $author$project$Main$Sum = {$: 'Sum'};
-var $elm_community$array_extra$Array$Extra$indexedMapToList = function (mapIndexedElement) {
-	return function (array) {
-		return A3(
-			$elm$core$Array$foldr,
-			F2(
-				function (element, _v0) {
-					var i = _v0.a;
-					var listSoFar = _v0.b;
-					return _Utils_Tuple2(
-						i - 1,
-						A2(
-							$elm$core$List$cons,
-							A2(mapIndexedElement, i, element),
-							listSoFar));
-				}),
-			_Utils_Tuple2(
-				$elm$core$Array$length(array) - 1,
-				_List_Nil),
-			array).b;
-	};
-};
-var $author$project$Main$Header = function (a) {
-	return {$: 'Header', a: a};
-};
-var $author$project$Main$Part = function (a) {
-	return {$: 'Part', a: a};
-};
-var $author$project$Main$Single = function (a) {
-	return {$: 'Single', a: a};
-};
-var $author$project$Main$moduleToRows = F2(
-	function (moduleIndex, m) {
-		var _v0 = m.grades;
-		if (_v0.$ === 'SingleGrade') {
-			return _List_fromArray(
-				[
-					$author$project$Main$Single(
-					{code: m.code, credits: m.credits, moduleIndex: moduleIndex, name: m.name})
-				]);
-		} else {
-			var grades = _v0.a;
-			return A2(
-				$elm$core$List$cons,
-				$author$project$Main$Header(
-					{code: m.code, credits: m.credits, moduleIndex: moduleIndex, name: m.name}),
-				A2(
-					$elm_community$array_extra$Array$Extra$indexedMapToList,
-					F2(
-						function (i, part) {
-							return $author$project$Main$Part(
-								{moduleIndex: moduleIndex, name: part.name, partIndex: i});
-						}),
-					grades));
-		}
-	});
-var $author$project$Main$modulesToRows = function (ms) {
-	return _Utils_ap(
-		$elm$core$List$concat(
-			A2(
-				$elm_community$array_extra$Array$Extra$indexedMapToList,
-				F2(
-					function (index, mod) {
-						return A2($author$project$Main$moduleToRows, index, mod);
-					}),
-				ms)),
-		_List_fromArray(
-			[$author$project$Main$Sum]));
-};
-var $mdgriffith$elm_ui$Element$Font$alignLeft = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontAlignment, $mdgriffith$elm_ui$Internal$Style$classes.textLeft);
-var $mdgriffith$elm_ui$Internal$Model$Paragraph = {$: 'Paragraph'};
-var $mdgriffith$elm_ui$Internal$Model$SpacingStyle = F3(
-	function (a, b, c) {
-		return {$: 'SpacingStyle', a: a, b: b, c: c};
-	});
-var $mdgriffith$elm_ui$Internal$Flag$spacing = $mdgriffith$elm_ui$Internal$Flag$flag(3);
-var $mdgriffith$elm_ui$Internal$Model$spacingName = F2(
-	function (x, y) {
-		return 'spacing-' + ($elm$core$String$fromInt(x) + ('-' + $elm$core$String$fromInt(y)));
-	});
-var $mdgriffith$elm_ui$Element$spacing = function (x) {
+var $author$project$Main$header = function (txt) {
 	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$spacing,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$SpacingStyle,
-			A2($mdgriffith$elm_ui$Internal$Model$spacingName, x, x),
-			x,
-			x));
+		$author$project$Main$cell,
+		_List_fromArray(
+			[
+				$author$project$Main$bottomBorder,
+				$mdgriffith$elm_ui$Element$Font$bold,
+				$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill)
+			]),
+		A2(
+			$mdgriffith$elm_ui$Element$el,
+			_List_fromArray(
+				[$mdgriffith$elm_ui$Element$alignBottom]),
+			$mdgriffith$elm_ui$Element$text(txt)));
 };
+var $mdgriffith$elm_ui$Internal$Model$Max = F2(
+	function (a, b) {
+		return {$: 'Max', a: a, b: b};
+	});
+var $mdgriffith$elm_ui$Element$maximum = F2(
+	function (i, l) {
+		return A2($mdgriffith$elm_ui$Internal$Model$Max, i, l);
+	});
+var $author$project$Main$moduleRowPadding = $mdgriffith$elm_ui$Element$paddingEach(
+	{bottom: 30, left: 10, right: 0, top: 10});
+var $mdgriffith$elm_ui$Internal$Model$Paragraph = {$: 'Paragraph'};
 var $mdgriffith$elm_ui$Element$paragraph = F2(
 	function (attrs, children) {
 		return A4(
@@ -12829,87 +13208,291 @@ var $mdgriffith$elm_ui$Element$paragraph = F2(
 						attrs))),
 			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
-var $mdgriffith$elm_ui$Internal$Model$Px = function (a) {
-	return {$: 'Px', a: a};
-};
-var $mdgriffith$elm_ui$Element$px = $mdgriffith$elm_ui$Internal$Model$Px;
-var $mdgriffith$elm_ui$Element$row = F2(
-	function (attrs, children) {
-		return A4(
-			$mdgriffith$elm_ui$Internal$Model$element,
-			$mdgriffith$elm_ui$Internal$Model$asRow,
-			$mdgriffith$elm_ui$Internal$Model$div,
-			A2(
-				$elm$core$List$cons,
-				$mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.contentLeft + (' ' + $mdgriffith$elm_ui$Internal$Style$classes.contentCenterY)),
-				A2(
-					$elm$core$List$cons,
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink),
-					A2(
-						$elm$core$List$cons,
-						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
-						attrs))),
-			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
-	});
-var $author$project$Main$nameColumn = function (r) {
-	switch (r.$) {
-		case 'Single':
-			var record = r.a;
+var $author$project$Main$nameColumn = function (row) {
+	switch (row.$) {
+		case 'AverageModuleRow':
+			var r = row.a;
 			return A2(
-				$author$project$Main$tableCell,
-				_List_Nil,
-				$mdgriffith$elm_ui$Element$text(
-					function ($) {
-						return $.name;
-					}(record)));
-		case 'Header':
-			var record = r.a;
-			return A2(
-				$author$project$Main$tableCell,
-				_List_Nil,
+				$author$project$Main$cell,
+				_List_fromArray(
+					[$author$project$Main$moduleRowPadding]),
 				A2(
 					$mdgriffith$elm_ui$Element$paragraph,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$Font$alignLeft]),
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$text(
-							function ($) {
-								return $.name;
-							}(record))
-						])));
-		case 'Part':
-			var record = r.a;
-			return A2(
-				$author$project$Main$tableCell,
-				_List_Nil,
-				A2(
-					$mdgriffith$elm_ui$Element$row,
 					_List_Nil,
 					_List_fromArray(
 						[
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$width(
-									$mdgriffith$elm_ui$Element$px(20))
-								]),
-							$mdgriffith$elm_ui$Element$none),
-							A2(
-							$mdgriffith$elm_ui$Element$paragraph,
-							_List_fromArray(
-								[$mdgriffith$elm_ui$Element$Font$alignLeft]),
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Element$text(
-									function ($) {
-										return $.name;
-									}(record))
-								]))
+							$mdgriffith$elm_ui$Element$text(r.name)
+						])));
+		case 'AverageAssignmentRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_Nil,
+				A2(
+					$mdgriffith$elm_ui$Element$paragraph,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$text(r.name)
+						])));
+		case 'PointsModuleRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_Nil,
+				A2(
+					$mdgriffith$elm_ui$Element$paragraph,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$text(r.name)
+						])));
+		case 'PointsAssignmentRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_Nil,
+				A2(
+					$mdgriffith$elm_ui$Element$paragraph,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$text(r.name)
+						])));
+		case 'SingleGrade345ModuleRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_Nil,
+				A2(
+					$mdgriffith$elm_ui$Element$paragraph,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$text(r.name)
 						])));
 		default:
-			return A2($author$project$Main$sumCell, _List_Nil, $mdgriffith$elm_ui$Element$none);
+			return A2(
+				$author$project$Main$cell,
+				_List_fromArray(
+					[
+						$author$project$Main$topBorder,
+						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill)
+					]),
+				$mdgriffith$elm_ui$Element$none);
+	}
+};
+var $author$project$Main$centeredCell = function (child) {
+	return A2(
+		$author$project$Main$cell,
+		_List_fromArray(
+			[$mdgriffith$elm_ui$Element$Font$center]),
+		child);
+};
+var $author$project$Main$newWeightColumn = function (row) {
+	switch (row.$) {
+		case 'AverageModuleRow':
+			var r = row.a;
+			return $author$project$Main$centeredCell(
+				$mdgriffith$elm_ui$Element$text(
+					$elm$core$String$fromInt(r.credits)));
+		case 'PointsModuleRow':
+			var r = row.a;
+			return $author$project$Main$centeredCell(
+				$mdgriffith$elm_ui$Element$text(
+					$elm$core$String$fromInt(r.credits)));
+		case 'SingleGrade345ModuleRow':
+			var r = row.a;
+			return $author$project$Main$centeredCell(
+				$mdgriffith$elm_ui$Element$text(
+					$elm$core$String$fromInt(r.credits)));
+		case 'SumRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_fromArray(
+					[$author$project$Main$topBorder]),
+				A2(
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[$mdgriffith$elm_ui$Element$centerX]),
+					$mdgriffith$elm_ui$Element$text(
+						$elm$core$String$fromInt(r.sumCredits))));
+		default:
+			return $mdgriffith$elm_ui$Element$none;
+	}
+};
+var $mdgriffith$elm_ui$Element$Font$alignRight = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontAlignment, $mdgriffith$elm_ui$Internal$Style$classes.textRight);
+var $author$project$Main$SetHigherGradePoints = F3(
+	function (a, b, c) {
+		return {$: 'SetHigherGradePoints', a: a, b: b, c: c};
+	});
+var $author$project$Main$higherGradePointsButtons = F4(
+	function (moduleIndex, assignmentIndex, points, selected) {
+		return A2(
+			$mdgriffith$elm_ui$Element$Input$radioRow,
+			_List_Nil,
+			{
+				label: $mdgriffith$elm_ui$Element$Input$labelHidden('Select higher grade points'),
+				onChange: A2($author$project$Main$SetHigherGradePoints, moduleIndex, assignmentIndex),
+				options: A3(
+					$author$project$Main$mkOptions,
+					A2($elm$core$List$range, 0, points),
+					$elm$core$String$fromInt,
+					$author$project$Main$color.blue),
+				selected: $elm$core$Maybe$Just(selected)
+			});
+	});
+var $author$project$Main$pointLadder = F4(
+	function (points, four, five, max) {
+		return _Utils_Tuple2(
+			A3($author$project$Main$pointsToGrade345, points, four, five),
+			A2(
+				$elm$core$List$map,
+				$elm$core$Tuple$mapSecond(
+					$elm$core$List$map(
+						function (x) {
+							return _Utils_Tuple2(
+								x,
+								(_Utils_cmp(points, x) > -1) ? $mdgriffith$elm_ui$Element$Input$Selected : $mdgriffith$elm_ui$Element$Input$Idle);
+						})),
+				A2(
+					$elm$core$List$map,
+					function (_v0) {
+						var grade = _v0.a;
+						var start = _v0.b;
+						var end = _v0.c;
+						return _Utils_Tuple2(
+							grade,
+							A2($elm$core$List$range, start, end));
+					},
+					_List_fromArray(
+						[
+							_Utils_Tuple3($author$project$Main$Three, 0, four - 1),
+							_Utils_Tuple3($author$project$Main$Four, four, five - 1),
+							_Utils_Tuple3($author$project$Main$Five, five, max)
+						]))));
+	});
+var $author$project$Main$grade345ToWord = function (grade) {
+	switch (grade.$) {
+		case 'Three':
+			return 'Three';
+		case 'Four':
+			return 'Four';
+		default:
+			return 'Five';
+	}
+};
+var $mdgriffith$elm_ui$Element$Font$regular = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textNormalWeight);
+var $author$project$Main$viewPointLadderHelper = F2(
+	function (g, _v0) {
+		var grade = _v0.a;
+		var points = _v0.b;
+		var weight = _Utils_eq(g, grade) ? $mdgriffith$elm_ui$Element$Font$bold : $mdgriffith$elm_ui$Element$Font$regular;
+		var bgColor = function (state) {
+			return $mdgriffith$elm_ui$Element$Background$color(
+				_Utils_eq(state, $mdgriffith$elm_ui$Element$Input$Selected) ? $author$project$Main$color.blue : $author$project$Main$color.white);
+		};
+		return A2(
+			$mdgriffith$elm_ui$Element$column,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$spacing(10)
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$centerX,
+							$mdgriffith$elm_ui$Element$Font$size(12),
+							weight
+						]),
+					$mdgriffith$elm_ui$Element$text(
+						$author$project$Main$grade345ToWord(grade))),
+					A2(
+					$mdgriffith$elm_ui$Element$row,
+					_List_Nil,
+					A2(
+						$elm$core$List$map,
+						function (_v1) {
+							var position = _v1.a;
+							var _v2 = _v1.b;
+							var point = _v2.a;
+							var state = _v2.b;
+							return A2(
+								$mdgriffith$elm_ui$Element$column,
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$Font$size(12),
+										$mdgriffith$elm_ui$Element$spacing(6)
+									]),
+								_List_fromArray(
+									[
+										A2(
+										$mdgriffith$elm_ui$Element$el,
+										_List_fromArray(
+											[
+												$mdgriffith$elm_ui$Element$centerX,
+												$mdgriffith$elm_ui$Element$width(
+												$mdgriffith$elm_ui$Element$px(14)),
+												$mdgriffith$elm_ui$Element$height(
+												$mdgriffith$elm_ui$Element$px(8)),
+												A2($author$project$Main$borders, 1, position),
+												A2($author$project$Main$corners, 3, position),
+												$mdgriffith$elm_ui$Element$Border$color($author$project$Main$color.gray),
+												bgColor(state)
+											]),
+										$mdgriffith$elm_ui$Element$none),
+										A2(
+										$mdgriffith$elm_ui$Element$el,
+										_List_fromArray(
+											[$mdgriffith$elm_ui$Element$centerX]),
+										$mdgriffith$elm_ui$Element$text(
+											$elm$core$String$fromInt(point)))
+									]));
+						},
+						$author$project$Main$positions(points)))
+				]));
+	});
+var $author$project$Main$viewPointLadder = function (_v0) {
+	var grade = _v0.a;
+	var pl = _v0.b;
+	return A2(
+		$mdgriffith$elm_ui$Element$row,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$spacing(10)
+			]),
+		A2(
+			$elm$core$List$map,
+			$author$project$Main$viewPointLadderHelper(grade),
+			pl));
+};
+var $author$project$Main$pointsColumn = function (row) {
+	switch (row.$) {
+		case 'PointsModuleRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_Nil,
+				$author$project$Main$viewPointLadder(
+					A4($author$project$Main$pointLadder, r.points, r.four, r.five, r.max)));
+		case 'PointsAssignmentRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_Nil,
+				A4($author$project$Main$higherGradePointsButtons, r.moduleIndex, r.assignmentIndex, r.max, r.points));
+		case 'SumRow':
+			return A2(
+				$author$project$Main$cell,
+				_List_fromArray(
+					[$author$project$Main$topBorder, $mdgriffith$elm_ui$Element$Font$alignRight, $mdgriffith$elm_ui$Element$Font$bold]),
+				$mdgriffith$elm_ui$Element$text('Sum'));
+		default:
+			return $mdgriffith$elm_ui$Element$none;
 	}
 };
 var $mdgriffith$elm_ui$Element$InternalColumn = function (a) {
@@ -13136,379 +13719,143 @@ var $mdgriffith$elm_ui$Element$table = F2(
 				data: config.data
 			});
 	});
-var $elm$core$Elm$JsArray$foldl = _JsArray_foldl;
-var $elm$core$Array$foldl = F3(
-	function (func, baseCase, _v0) {
-		var tree = _v0.c;
-		var tail = _v0.d;
-		var helper = F2(
-			function (node, acc) {
-				if (node.$ === 'SubTree') {
-					var subTree = node.a;
-					return A3($elm$core$Elm$JsArray$foldl, helper, acc, subTree);
-				} else {
-					var values = node.a;
-					return A3($elm$core$Elm$JsArray$foldl, func, acc, values);
-				}
-			});
-		return A3(
-			$elm$core$Elm$JsArray$foldl,
-			func,
-			A3($elm$core$Elm$JsArray$foldl, helper, baseCase, tree),
-			tail);
-	});
-var $author$project$Main$weightColumn = F2(
-	function (modules, row) {
-		switch (row.$) {
-			case 'Single':
-				var record = row.a;
-				return A2(
-					$author$project$Main$tableCell,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$centerX]),
-					$mdgriffith$elm_ui$Element$text(
-						$elm$core$String$fromInt(
-							function ($) {
-								return $.credits;
-							}(record))));
-			case 'Header':
-				var record = row.a;
-				return A2(
-					$author$project$Main$tableCell,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$centerX]),
-					$mdgriffith$elm_ui$Element$text(
-						$elm$core$String$fromInt(
-							function ($) {
-								return $.credits;
-							}(record))));
-			case 'Part':
-				return $mdgriffith$elm_ui$Element$none;
-			default:
-				var totalWeight = A3(
-					$elm$core$Array$foldl,
-					F2(
-						function (m, sumW) {
-							return m.credits + sumW;
-						}),
-					0,
-					modules);
-				return A2(
-					$author$project$Main$sumCell,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$centerX]),
-					$mdgriffith$elm_ui$Element$text(
-						$elm$core$String$fromInt(totalWeight)));
-		}
-	});
-var $elm_community$maybe_extra$Maybe$Extra$combineHelp = F2(
-	function (list, acc) {
-		combineHelp:
-		while (true) {
-			if (list.b) {
-				var head = list.a;
-				var tail = list.b;
-				if (head.$ === 'Just') {
-					var a = head.a;
-					var $temp$list = tail,
-						$temp$acc = A2($elm$core$List$cons, a, acc);
-					list = $temp$list;
-					acc = $temp$acc;
-					continue combineHelp;
-				} else {
-					return $elm$core$Maybe$Nothing;
-				}
-			} else {
-				return $elm$core$Maybe$Just(
-					$elm$core$List$reverse(acc));
-			}
-		}
-	});
-var $elm_community$maybe_extra$Maybe$Extra$combine = function (list) {
-	return A2($elm_community$maybe_extra$Maybe$Extra$combineHelp, list, _List_Nil);
-};
-var $elm$core$Tuple$pair = F2(
-	function (a, b) {
-		return _Utils_Tuple2(a, b);
-	});
-var $TSFoster$elm_tuple_extra$Tuple2$maybeMapSecond = F2(
-	function (fn, _v0) {
-		var a = _v0.a;
-		var b = _v0.b;
+var $author$project$Main$weightedGrade = F2(
+	function (grade, credits) {
 		return A2(
-			$elm$core$Maybe$map,
-			$elm$core$Tuple$pair(a),
-			fn(b));
-	});
-var $author$project$Main$finalGrade = function (modules) {
-	return A2(
-		$elm$core$Maybe$map,
-		A2(
-			$elm$core$List$foldl,
-			F2(
-				function (_v0, _v1) {
-					var w = _v0.a;
-					var g = _v0.b;
-					var wSum = _v1.a;
-					var gSum = _v1.b;
-					return _Utils_Tuple2(
-						w + wSum,
-						(w * $elm$core$Basics$round(g)) + gSum);
-				}),
-			_Utils_Tuple2(0, 0)),
-		$elm_community$maybe_extra$Maybe$Extra$combine(
+			$elm$core$Maybe$withDefault,
+			'No grade',
 			A2(
-				$elm$core$List$map,
-				function (mod) {
-					return A2(
-						$TSFoster$elm_tuple_extra$Tuple2$maybeMapSecond,
-						$author$project$Main$averageGrade,
-						_Utils_Tuple2(
-							function ($) {
-								return $.credits;
-							}(mod),
-							function ($) {
-								return $.grades;
-							}(mod)));
+				$elm$core$Maybe$map,
+				function (g) {
+					return $elm$core$String$fromInt(
+						credits * $author$project$Main$grade345ToInt(g));
 				},
-				$elm$core$Array$toList(modules))));
-};
-var $author$project$Main$moduleWeightAndAveragageGradeFromIndex = F2(
-	function (moduleIndex, modules) {
-		return A2(
-			$elm$core$Maybe$map,
-			function (m) {
-				return _Utils_Tuple2(
-					m.credits,
-					$author$project$Main$averageModuleGrade(m));
-			},
-			A2($elm$core$Array$get, moduleIndex, modules));
+				grade));
 	});
-var $author$project$Main$viewModuleAverageWeightedGrade = F2(
-	function (moduleIndex, modules) {
-		var _v0 = A2($author$project$Main$moduleWeightAndAveragageGradeFromIndex, moduleIndex, modules);
-		if (_v0.$ === 'Nothing') {
-			return $mdgriffith$elm_ui$Element$text(
-				'Error: Invalid module index ' + $elm$core$String$fromInt(moduleIndex));
-		} else {
-			if (_v0.a.b.$ === 'Nothing') {
-				var _v1 = _v0.a;
-				var _v2 = _v1.b;
-				return $mdgriffith$elm_ui$Element$text('No grade');
-			} else {
-				var _v3 = _v0.a;
-				var w = _v3.a;
-				var avg = _v3.b.a;
-				return $mdgriffith$elm_ui$Element$text(
-					$elm$core$String$fromInt(
-						w * $elm$core$Basics$round(avg)));
-			}
-		}
-	});
-var $author$project$Main$weightedColumn = F2(
-	function (modules, w) {
-		switch (w.$) {
-			case 'Single':
-				var s = w.a;
-				return A2(
-					$author$project$Main$tableCell,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$centerX]),
-					A2($author$project$Main$viewModuleAverageWeightedGrade, s.moduleIndex, modules));
-			case 'Header':
-				var h = w.a;
-				return A2(
-					$author$project$Main$tableCell,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$centerX]),
-					A2($author$project$Main$viewModuleAverageWeightedGrade, h.moduleIndex, modules));
-			case 'Part':
-				return $mdgriffith$elm_ui$Element$none;
-			default:
-				var sum = A2(
-					$elm$core$Maybe$withDefault,
-					'Incomplete',
+var $author$project$Main$weightedGradeColumn = function (row) {
+	switch (row.$) {
+		case 'AverageModuleRow':
+			var r = row.a;
+			return $author$project$Main$centeredCell(
+				$mdgriffith$elm_ui$Element$text(
 					A2(
-						$elm$core$Maybe$map,
-						function (_v1) {
-							var s = _v1.b;
-							return $elm$core$String$fromInt(s);
-						},
-						$author$project$Main$finalGrade(modules)));
-				return A2(
-					$author$project$Main$sumCell,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$centerX]),
-					$mdgriffith$elm_ui$Element$text(sum));
-		}
-	});
-var $author$project$Main$modulesTable = function (modules) {
-	var headerCell = F2(
-		function (attributes, child) {
+						$elm$core$Maybe$withDefault,
+						'No grade',
+						A2(
+							$elm$core$Maybe$map,
+							function (g) {
+								return $elm$core$String$fromInt(
+									$author$project$Main$grade345ToInt(g.grade) * r.credits);
+							},
+							r.grade))));
+		case 'PointsModuleRow':
+			var r = row.a;
+			return $author$project$Main$centeredCell(
+				$mdgriffith$elm_ui$Element$text(
+					A2($author$project$Main$weightedGrade, r.grade, r.credits)));
+		case 'SingleGrade345ModuleRow':
+			var r = row.a;
+			return $author$project$Main$centeredCell(
+				$mdgriffith$elm_ui$Element$text(
+					A2($author$project$Main$weightedGrade, r.grade, r.credits)));
+		case 'SumRow':
+			var r = row.a;
 			return A2(
-				$mdgriffith$elm_ui$Element$el,
+				$author$project$Main$cell,
 				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
-						$mdgriffith$elm_ui$Element$Font$bold,
-						$mdgriffith$elm_ui$Element$Border$widthEach(
-						{bottom: 2, left: 0, right: 0, top: 0}),
-						A2($mdgriffith$elm_ui$Element$paddingXY, 20, 6)
-					]),
+					[$author$project$Main$topBorder]),
 				A2(
 					$mdgriffith$elm_ui$Element$el,
-					_Utils_ap(
-						attributes,
-						_List_fromArray(
-							[$mdgriffith$elm_ui$Element$alignBottom])),
-					child));
-		});
-	var centeredStrings = function (strings) {
-		return A2(
-			$mdgriffith$elm_ui$Element$paragraph,
-			_List_Nil,
-			A2(
-				$elm$core$List$intersperse,
-				$mdgriffith$elm_ui$Element$html(
-					A2($elm$html$Html$br, _List_Nil, _List_Nil)),
-				A2($elm$core$List$map, $mdgriffith$elm_ui$Element$text, strings)));
-	};
+					_List_fromArray(
+						[$mdgriffith$elm_ui$Element$centerX]),
+					$mdgriffith$elm_ui$Element$text(
+						A2(
+							$elm$core$Maybe$withDefault,
+							'Incomplete',
+							A2($elm$core$Maybe$map, $elm$core$String$fromInt, r.sumWeightedGrades)))));
+		default:
+			return $mdgriffith$elm_ui$Element$none;
+	}
+};
+var $author$project$Main$viewTableRows = function (rows) {
 	return A2(
 		$mdgriffith$elm_ui$Element$table,
-		_List_Nil,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$width(
+				$mdgriffith$elm_ui$Element$px(800))
+			]),
 		{
 			columns: _List_fromArray(
 				[
 					{
-					header: A2(
-						headerCell,
-						_List_fromArray(
-							[$mdgriffith$elm_ui$Element$centerX]),
-						$mdgriffith$elm_ui$Element$text('Code')),
+					header: $author$project$Main$header('Code'),
 					view: $author$project$Main$codeColumn,
-					width: $mdgriffith$elm_ui$Element$shrink
+					width: $mdgriffith$elm_ui$Element$px(70)
 				},
 					{
-					header: A2(
-						headerCell,
-						_List_Nil,
-						$mdgriffith$elm_ui$Element$text('Ladok module')),
+					header: $author$project$Main$header('Ladok module'),
 					view: $author$project$Main$nameColumn,
 					width: $mdgriffith$elm_ui$Element$fill
 				},
 					{
-					header: A2(
-						headerCell,
-						_List_fromArray(
-							[$mdgriffith$elm_ui$Element$centerX]),
-						$mdgriffith$elm_ui$Element$text('Grade')),
-					view: $author$project$Main$gradeColumn(modules),
-					width: $mdgriffith$elm_ui$Element$shrink
+					header: $author$project$Main$header('Grade'),
+					view: $author$project$Main$gradeColumn,
+					width: $mdgriffith$elm_ui$Element$px(150)
 				},
 					{
-					header: A2(
-						headerCell,
-						_List_fromArray(
-							[$mdgriffith$elm_ui$Element$Font$center]),
-						centeredStrings(
-							_List_fromArray(
-								['Weight', '(credits)']))),
-					view: $author$project$Main$weightColumn(modules),
-					width: $mdgriffith$elm_ui$Element$shrink
+					header: $author$project$Main$header('Points'),
+					view: $author$project$Main$pointsColumn,
+					width: A2($mdgriffith$elm_ui$Element$maximum, 100, $mdgriffith$elm_ui$Element$fill)
 				},
 					{
-					header: A2(
-						headerCell,
-						_List_fromArray(
-							[$mdgriffith$elm_ui$Element$Font$center]),
-						centeredStrings(
-							_List_fromArray(
-								['Weighted', 'grade']))),
-					view: $author$project$Main$weightedColumn(modules),
-					width: $mdgriffith$elm_ui$Element$shrink
+					header: $author$project$Main$centeredHeader('Weight\n(credits)'),
+					view: $author$project$Main$newWeightColumn,
+					width: $mdgriffith$elm_ui$Element$px(100)
+				},
+					{
+					header: $author$project$Main$centeredHeader('Weigted\ngrade'),
+					view: $author$project$Main$weightedGradeColumn,
+					width: $mdgriffith$elm_ui$Element$px(100)
 				}
 				]),
-			data: $author$project$Main$modulesToRows(modules)
+			data: rows
 		});
 };
-var $mdgriffith$elm_ui$Element$padding = function (x) {
-	var f = x;
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$padding,
-		A5(
-			$mdgriffith$elm_ui$Internal$Model$PaddingStyle,
-			'p-' + $elm$core$String$fromInt(x),
-			f,
-			f,
-			f,
-			f));
-};
-var $author$project$Main$viewFinalGrade = function (model) {
-	return A2(
-		$elm$core$Maybe$withDefault,
-		A2(
-			$mdgriffith$elm_ui$Element$paragraph,
-			_List_fromArray(
-				[$mdgriffith$elm_ui$Element$Font$alignLeft, $mdgriffith$elm_ui$Element$Font$bold]),
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$text('No final grade')
-				])),
-		A2(
-			$elm$core$Maybe$map,
-			function (_v0) {
-				var totalWeight = _v0.a;
-				var sum = _v0.b;
-				var avgGrade = sum / totalWeight;
-				return A2(
-					$mdgriffith$elm_ui$Element$paragraph,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$Font$alignLeft]),
-					_List_fromArray(
-						[
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							_List_fromArray(
-								[$mdgriffith$elm_ui$Element$Font$bold]),
-							$mdgriffith$elm_ui$Element$text('Final grade ')),
-							$mdgriffith$elm_ui$Element$text(' = '),
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							_List_fromArray(
-								[$mdgriffith$elm_ui$Element$Font$bold]),
-							$mdgriffith$elm_ui$Element$text(
-								$elm$core$String$fromInt(
-									$elm$core$Basics$round(avgGrade)))),
-							$mdgriffith$elm_ui$Element$text(
-							' (' + $elm$core$String$fromInt(sum)),
-							$mdgriffith$elm_ui$Element$text(
-							'/' + ($elm$core$String$fromInt(totalWeight) + (' ≈ ' + (A2($myrho$elm_round$Round$round, 2, avgGrade) + ')'))))
-						]));
-			},
-			$author$project$Main$finalGrade(model)));
+var $author$project$Main$viewTable = function (model) {
+	return $author$project$Main$viewTableRows(
+		$author$project$Main$modelToTableRows(model));
 };
 var $author$project$Main$view = function (model) {
 	return A2(
 		$mdgriffith$elm_ui$Element$layout,
 		_List_fromArray(
 			[
-				$mdgriffith$elm_ui$Element$padding(20)
+				$mdgriffith$elm_ui$Element$padding(20),
+				$mdgriffith$elm_ui$Element$Font$size(16)
 			]),
 		A2(
 			$mdgriffith$elm_ui$Element$column,
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$spacing(20),
-					$mdgriffith$elm_ui$Element$Font$size(12)
+					$mdgriffith$elm_ui$Element$width(
+					$mdgriffith$elm_ui$Element$px(400))
 				]),
 			_List_fromArray(
 				[
-					$author$project$Main$modulesTable(model),
+					$author$project$Main$viewTable(model),
 					$author$project$Main$viewFinalGrade(model)
 				])));
 };
-var $author$project$Main$main = $elm$browser$Browser$sandbox(
-	{init: $author$project$Main$dspModules, update: $author$project$Main$update, view: $author$project$Main$view});
+var $author$project$Main$main = $elm$browser$Browser$element(
+	{
+		init: function (_v0) {
+			return $author$project$Main$init;
+		},
+		subscriptions: $elm$core$Basics$always($elm$core$Platform$Sub$none),
+		update: $author$project$Main$update,
+		view: $author$project$Main$view
+	});
 _Platform_export({'Main':{'init':$author$project$Main$main(
 	$elm$json$Json$Decode$succeed(_Utils_Tuple0))(0)}});}(this));
