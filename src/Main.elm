@@ -8,7 +8,7 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import Html exposing (Html)
+import Html exposing (Html, a)
 import Maybe.Extra
 import Round
 import Tuple.Extra
@@ -33,7 +33,8 @@ type alias Module =
 type Assignments
     = SingleGrade345 (Maybe Grade345)
     | AverageGrade345 (Array Grade345Assignment)
-    | Points PointsAssignments
+    | FailPassPoints FailPassPointsAssignments
+    | PointsOnly FailPassPointsAssignments
 
 
 type Grade345
@@ -48,7 +49,7 @@ type alias Grade345Assignment =
     }
 
 
-type alias PointsAssignments =
+type alias FailPassPointsAssignments =
     { four : Int
     , five : Int
     , assignments : Array PointsAssignment
@@ -66,7 +67,14 @@ type alias PointsAssignment =
 type ModuleGrade
     = SingleModuleGrade (Maybe Grade345)
     | AverageModuleGrade (Maybe { grade : Grade345, average : Float })
-    | PointesModuleGrade
+    | FailPassPointsModuleGrade
+        { grade : Maybe Grade345
+        , points : Int
+        , four : Int
+        , five : Int
+        , max : Int
+        }
+    | PointsOnlyModuleGrade
         { grade : Maybe Grade345
         , points : Int
         , four : Int
@@ -77,6 +85,22 @@ type ModuleGrade
 
 
 ---- Functions ----
+
+
+numberOfAssignments : Module -> Int
+numberOfAssignments m =
+    case m.assignments of
+        AverageGrade345 a ->
+            Array.length a
+
+        FailPassPoints a ->
+            Array.length a.assignments
+
+        PointsOnly a ->
+            Array.length a.assignments
+
+        _ ->
+            0
 
 
 moduleGradeToMaybeInt : ModuleGrade -> Maybe Int
@@ -91,7 +115,10 @@ moduleGradeToMaybeInt grade =
         AverageModuleGrade Nothing ->
             Nothing
 
-        PointesModuleGrade g ->
+        FailPassPointsModuleGrade g ->
+            g.grade |> Maybe.map grade345ToInt
+
+        PointsOnlyModuleGrade g ->
             g.grade |> Maybe.map grade345ToInt
 
 
@@ -117,14 +144,35 @@ higherGradeAssignment name max =
     }
 
 
+pointsOnlyAssignment : String -> Int -> PointsAssignment
+pointsOnlyAssignment name max =
+    { name = name
+    , mandatoryPass = True
+    , max = max
+    , points = 1
+    }
+
+
 higherGradeAssignments : Int -> Int -> List ( String, Int ) -> Assignments
 higherGradeAssignments four five assignments =
-    Points
+    FailPassPoints
         { four = four
         , five = five
         , assignments =
             assignments
                 |> List.map (\( name, max ) -> higherGradeAssignment name max)
+                |> Array.fromList
+        }
+
+
+pointsOnlyAssignments : Int -> Int -> List ( String, Int ) -> Assignments
+pointsOnlyAssignments four five assignments =
+    PointsOnly
+        { four = four
+        , five = five
+        , assignments =
+            assignments
+                |> List.map (\( name, max ) -> pointsOnlyAssignment name max)
                 |> Array.fromList
         }
 
@@ -138,8 +186,11 @@ moduleGrade m =
         AverageGrade345 assignments ->
             averageGrade assignments
 
-        Points assignments ->
+        FailPassPoints assignments ->
             pointsGrade assignments
+
+        PointsOnly assignments ->
+            pointsOnlyGrade assignments (numberOfAssignments m)
 
 
 averageGradeHelper : Array Grade345Assignment -> Maybe { grade : Grade345, average : Float }
@@ -181,7 +232,7 @@ pointsToGrade345 points four five =
 
 
 pointsGradeHelper :
-    PointsAssignments
+    FailPassPointsAssignments
     ->
         { grade : Maybe Grade345
         , points : Int
@@ -212,9 +263,47 @@ pointsGradeHelper assignments =
            )
 
 
-pointsGrade : PointsAssignments -> ModuleGrade
+pointsOnlyGradeHelper :
+    FailPassPointsAssignments
+    -> Int
+    ->
+        { grade : Maybe Grade345
+        , points : Int
+        , four : Int
+        , five : Int
+        , max : Int
+        }
+pointsOnlyGradeHelper assignments passOffset =
+    assignments.assignments
+        |> Array.map (\assignment -> ( assignment.mandatoryPass, assignment.points, assignment.max ))
+        |> Array.foldl
+            (combine3Tuples
+                (&&)
+                (+)
+                (+)
+            )
+            ( True, 0, 0 )
+        |> (\( allMandatoryPass, points, max ) ->
+                let
+                    grade =
+                        if allMandatoryPass then
+                            Just <| pointsToGrade345 (points - passOffset) assignments.four assignments.five
+
+                        else
+                            Nothing
+                in
+                { grade = grade, points = points, max = max, four = assignments.four, five = assignments.five }
+           )
+
+
+pointsGrade : FailPassPointsAssignments -> ModuleGrade
 pointsGrade assignments =
-    PointesModuleGrade <| pointsGradeHelper assignments
+    FailPassPointsModuleGrade <| pointsGradeHelper assignments
+
+
+pointsOnlyGrade : FailPassPointsAssignments -> Int -> ModuleGrade
+pointsOnlyGrade assignments passOffset =
+    PointsOnlyModuleGrade <| pointsOnlyGradeHelper assignments passOffset
 
 
 grade345ToInt : Grade345 -> Int
@@ -329,6 +418,21 @@ dspAssignments =
     }
 
 
+dspAssignmentsV2 : Module
+dspAssignmentsV2 =
+    { code = "2010"
+    , name = "Assignments"
+    , credits = 5
+    , assignments =
+        pointsOnlyAssignments 4
+            8
+            [ ( "Fundamental concepts", 3 )
+            , ( "The process concept", 3 )
+            , ( "Threads, synchronization and deadlock", 4 )
+            ]
+    }
+
+
 writtenExam : Module
 writtenExam =
     { code = "3000"
@@ -425,9 +529,19 @@ dspModel =
         ]
 
 
+dspModelV2 : Model
+dspModelV2 =
+    Array.fromList
+        [ dspWrittenExam
+        , dspAssignmentsV2
+        , dspProjectIndividual
+        , dspProjectGroup
+        ]
+
+
 init : ( Model, Cmd Msg )
 init =
-    ( dspModel, Cmd.none )
+    ( dspModelV2, Cmd.none )
 
 
 getModuleGrade345 : Module -> Maybe Grade345
@@ -452,7 +566,8 @@ type Msg
     = SetSinglGrade345 Int (Maybe Grade345)
     | SetAverageGrade345 Int Int (Maybe Grade345)
     | SetMandatoryPass Int Int Bool
-    | SetHigherGradePoints Int Int Int
+    | SetFailPassPointsPointsGradePoints Int Int Int
+    | SetPointsOnlyPoints Int Int Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -479,7 +594,14 @@ update msg model =
             in
             ( newModel, Cmd.none )
 
-        SetHigherGradePoints moduleIndex assignmentIndex points ->
+        SetFailPassPointsPointsGradePoints moduleIndex assignmentIndex points ->
+            let
+                newModel =
+                    Array.Extra.update moduleIndex (updateHigherGradePoints assignmentIndex points) model
+            in
+            ( newModel, Cmd.none )
+
+        SetPointsOnlyPoints moduleIndex assignmentIndex points ->
             let
                 newModel =
                     Array.Extra.update moduleIndex (updateHigherGradePoints assignmentIndex points) model
@@ -500,13 +622,13 @@ updateSingleGrade grade m =
 updateMandatoryPass : Int -> Bool -> Module -> Module
 updateMandatoryPass assignmentIndex pass m =
     case m.assignments of
-        Points assignments ->
+        FailPassPoints assignments ->
             let
                 newAssignments : Array PointsAssignment
                 newAssignments =
                     Array.Extra.update assignmentIndex (\a -> { a | mandatoryPass = pass }) assignments.assignments
             in
-            { m | assignments = Points { assignments | assignments = newAssignments } }
+            { m | assignments = FailPassPoints { assignments | assignments = newAssignments } }
 
         _ ->
             m
@@ -515,13 +637,45 @@ updateMandatoryPass assignmentIndex pass m =
 updateHigherGradePoints : Int -> Int -> Module -> Module
 updateHigherGradePoints assignmentIndex points m =
     case m.assignments of
-        Points assignments ->
+        FailPassPoints assignments ->
             let
                 newAssignments : Array PointsAssignment
                 newAssignments =
                     Array.Extra.update assignmentIndex (\a -> { a | points = points }) assignments.assignments
             in
-            { m | assignments = Points { assignments | assignments = newAssignments } }
+            { m | assignments = FailPassPoints { assignments | assignments = newAssignments } }
+
+        PointsOnly assignments ->
+            case points of
+                0 ->
+                    let
+                        newAssignments : Array PointsAssignment
+                        newAssignments =
+                            Array.Extra.update assignmentIndex
+                                (\a ->
+                                    { a
+                                        | mandatoryPass = False
+                                        , points = points
+                                    }
+                                )
+                                assignments.assignments
+                    in
+                    { m | assignments = PointsOnly { assignments | assignments = newAssignments } }
+
+                _ ->
+                    let
+                        newAssignments : Array PointsAssignment
+                        newAssignments =
+                            Array.Extra.update assignmentIndex
+                                (\a ->
+                                    { a
+                                        | mandatoryPass = True
+                                        , points = points
+                                    }
+                                )
+                                assignments.assignments
+                    in
+                    { m | assignments = PointsOnly { assignments | assignments = newAssignments } }
 
         _ ->
             m
@@ -562,6 +716,44 @@ viewPointLadder : ( Grade345, List ( Grade345, List ( Int, Input.OptionState ) )
 viewPointLadder ( grade, pl ) =
     row [ spacing 10 ] <|
         List.map (viewPointLadderHelper grade) pl
+
+
+viewPointsOnlyLadder : ( Grade345, List ( Grade345, List ( Int, Input.OptionState ) ) ) -> Element Msg
+viewPointsOnlyLadder ( grade, pl ) =
+    row [ spacing 10 ] <|
+        List.map (viewPointsOnlyLadderHelper grade) pl
+
+
+viewPointsOnlyLadderHelper : Grade345 -> ( Grade345, List ( Int, Input.OptionState ) ) -> Element Msg
+viewPointsOnlyLadderHelper g ( grade, points ) =
+    let
+        weight =
+            if g == grade then
+                Font.bold
+
+            else
+                Font.regular
+
+        bgColor state point =
+            Background.color <|
+                if state == Input.Selected then
+                    color.blue
+
+                else
+                    color.white
+    in
+    column [ spacing 10 ]
+        [ el [ centerX, Font.size 12, weight ] <| text <| grade345ToWord grade
+        , row [] <|
+            List.map
+                (\( position, ( point, state ) ) ->
+                    column [ Font.size 12, spacing 6 ]
+                        [ el [ centerX, width (px 14), height (px 8), borders 1 position, corners 3 position, Border.color color.gray, bgColor state point ] <| none
+                        , el [ centerX ] <| text <| String.fromInt point
+                        ]
+                )
+                (positions points)
+        ]
 
 
 viewPointLadderHelper : Grade345 -> ( Grade345, List ( Int, Input.OptionState ) ) -> Element Msg
@@ -823,16 +1015,16 @@ positions list =
         |> List.indexedMap (\i x -> ( indexToPostion i, x ))
 
 
-mkOptions : List a -> (a -> String) -> Color -> List (Input.Option a Msg)
+mkOptions : List a -> (a -> String) -> (a -> Color) -> List (Input.Option a Msg)
 mkOptions values valueToString c =
     values
         |> positions
         |> List.map (mkOption valueToString c)
 
 
-mkOption : (a -> String) -> Color -> ( Position, a ) -> Input.Option a Msg
+mkOption : (a -> String) -> (a -> Color) -> ( Position, a ) -> Input.Option a Msg
 mkOption valueToString c ( position, value ) =
-    Input.optionWith value <| button position c (valueToString value)
+    Input.optionWith value <| button position (c value) (valueToString value)
 
 
 grade345Buttons : Maybe Grade345 -> (Maybe Grade345 -> Msg) -> Element Msg
@@ -841,7 +1033,7 @@ grade345Buttons selected msg =
         { onChange = msg
         , selected = Just selected
         , label = Input.labelHidden "Select grade"
-        , options = mkOptions [ Nothing, Just Three, Just Four, Just Five ] grade345ToString color.green
+        , options = mkOptions [ Nothing, Just Three, Just Four, Just Five ] grade345ToString (\_ -> color.green)
         }
 
 
@@ -860,18 +1052,45 @@ mandatoryPassButtons moduleIndex assignmentIndex selected =
         { onChange = SetMandatoryPass moduleIndex assignmentIndex
         , selected = Just selected
         , label = Input.labelHidden "Select mandaatory fail or pass"
-        , options = mkOptions [ False, True ] boolToFailPass color.green
+        , options = mkOptions [ False, True ] boolToFailPass (\_ -> color.green)
         }
 
 
 higherGradePointsButtons : Int -> Int -> Int -> Int -> Element Msg
 higherGradePointsButtons moduleIndex assignmentIndex points selected =
     Input.radioRow []
-        { onChange = SetHigherGradePoints moduleIndex assignmentIndex
+        { onChange = SetFailPassPointsPointsGradePoints moduleIndex assignmentIndex
         , selected = Just selected
         , label = Input.labelHidden "Select higher grade points"
-        , options = mkOptions (List.range 0 points) String.fromInt color.blue
+        , options = mkOptions (List.range 0 points) String.fromInt (\_ -> color.blue)
         }
+
+
+pointsOnlyButtons : Int -> Int -> Int -> Int -> Element Msg
+pointsOnlyButtons moduleIndex assignmentIndex points selected =
+    let
+        theColor point =
+            case point of
+                0 ->
+                    color.red
+
+                1 ->
+                    color.green
+
+                _ ->
+                    color.blue
+    in
+    row [ spacing 10 ]
+        [ Input.radioRow []
+            { onChange = SetPointsOnlyPoints moduleIndex assignmentIndex
+            , selected = Just selected
+            , label = Input.labelHidden "Select higher grade points"
+            , options =
+                mkOptions (List.range 0 (points + 1))
+                    String.fromInt
+                    theColor
+            }
+        ]
 
 
 type TableRow
@@ -887,7 +1106,7 @@ type TableRow
         , assignmentIndex : Int
         , grade : Maybe Grade345
         }
-    | PointsModuleRow
+    | FailPassPointsModuleRow
         { code : String
         , name : String
         , grade : Maybe Grade345
@@ -897,7 +1116,26 @@ type TableRow
         , max : Int
         , credits : Int
         }
-    | PointsAssignmentRow
+    | PointsOnlyModuleRow
+        { code : String
+        , name : String
+        , grade : Maybe Grade345
+        , points : Int
+        , four : Int
+        , five : Int
+        , max : Int
+        , numberOfAssignments : Int
+        , credits : Int
+        }
+    | FailPassPointsAssignmentRow
+        { name : String
+        , moduleIndex : Int
+        , assignmentIndex : Int
+        , mandatoryPass : Bool
+        , points : Int
+        , max : Int
+        }
+    | PointsOnlyAssignmentRow
         { name : String
         , moduleIndex : Int
         , assignmentIndex : Int
@@ -938,17 +1176,44 @@ moduleTableRows moduleIndex m =
                             )
                    )
 
-        Points assignments ->
+        FailPassPoints assignments ->
             let
                 grade =
                     pointsGradeHelper assignments
             in
-            PointsModuleRow { code = m.code, name = m.name, grade = grade.grade, points = grade.points, four = assignments.four, five = assignments.five, max = grade.max, credits = m.credits }
+            FailPassPointsModuleRow { code = m.code, name = m.name, grade = grade.grade, points = grade.points, four = assignments.four, five = assignments.five, max = grade.max, credits = m.credits }
                 :: (assignments.assignments
                         |> Array.toList
                         |> List.indexedMap
                             (\assignmentIndex assignment ->
-                                PointsAssignmentRow { name = assignment.name, moduleIndex = moduleIndex, assignmentIndex = assignmentIndex, mandatoryPass = assignment.mandatoryPass, points = assignment.points, max = assignment.max }
+                                FailPassPointsAssignmentRow { name = assignment.name, moduleIndex = moduleIndex, assignmentIndex = assignmentIndex, mandatoryPass = assignment.mandatoryPass, points = assignment.points, max = assignment.max }
+                            )
+                   )
+
+        PointsOnly assignments ->
+            let
+                grade =
+                    pointsOnlyGradeHelper assignments n
+
+                n =
+                    numberOfAssignments m
+            in
+            PointsOnlyModuleRow
+                { code = m.code
+                , name = m.name
+                , grade = grade.grade
+                , points = grade.points
+                , four = assignments.four + n
+                , five = assignments.five + n
+                , max = grade.max + n
+                , credits = m.credits
+                , numberOfAssignments = n
+                }
+                :: (assignments.assignments
+                        |> Array.toList
+                        |> List.indexedMap
+                            (\assignmentIndex assignment ->
+                                PointsOnlyAssignmentRow { name = assignment.name, moduleIndex = moduleIndex, assignmentIndex = assignmentIndex, mandatoryPass = assignment.mandatoryPass, points = assignment.points, max = assignment.max }
                             )
                    )
 
@@ -982,7 +1247,7 @@ exampleTableRows =
         , assignmentIndex = 0
         , grade = Just Four
         }
-    , PointsModuleRow
+    , FailPassPointsModuleRow
         { code = "2000"
         , name = "Assignments (part 1)"
         , grade = Just Three
@@ -992,7 +1257,7 @@ exampleTableRows =
         , max = 10
         , credits = 2
         }
-    , PointsAssignmentRow
+    , FailPassPointsAssignmentRow
         { name = "Fundamental Concepts"
         , moduleIndex = 1
         , assignmentIndex = 0
@@ -1015,7 +1280,7 @@ codeColumn row =
         AverageModuleRow r ->
             cell [] <| text r.code
 
-        PointsModuleRow r ->
+        FailPassPointsModuleRow r ->
             cell [] <| text r.code
 
         SingleGrade345ModuleRow r ->
@@ -1040,10 +1305,16 @@ nameColumn row =
         AverageAssignmentRow r ->
             cell [] <| paragraph [] [ text r.name ]
 
-        PointsModuleRow r ->
+        FailPassPointsModuleRow r ->
             cell [] <| paragraph [] [ text r.name ]
 
-        PointsAssignmentRow r ->
+        PointsOnlyModuleRow r ->
+            cell [] <| paragraph [] [ text r.name ]
+
+        FailPassPointsAssignmentRow r ->
+            cell [] <| paragraph [] [ text r.name ]
+
+        PointsOnlyAssignmentRow r ->
             cell [] <| paragraph [] [ text r.name ]
 
         SingleGrade345ModuleRow r ->
@@ -1061,11 +1332,17 @@ gradeColumn row =
         AverageAssignmentRow r ->
             cell [] <| grade345Buttons r.grade (SetAverageGrade345 r.moduleIndex r.assignmentIndex)
 
-        PointsModuleRow r ->
+        FailPassPointsModuleRow r ->
             cell [] <| text <| viewPointsModuleGrade r.grade r.points r.max
 
-        PointsAssignmentRow r ->
+        PointsOnlyModuleRow r ->
+            cell [] <| text <| viewPointsModuleGrade r.grade r.points r.max
+
+        FailPassPointsAssignmentRow r ->
             cell [] <| mandatoryPassButtons r.moduleIndex r.assignmentIndex r.mandatoryPass
+
+        PointsOnlyAssignmentRow _ ->
+            cell [] none
 
         SingleGrade345ModuleRow r ->
             cell [] <| grade345Buttons r.grade (SetSinglGrade345 r.moduleIndex)
@@ -1076,13 +1353,21 @@ gradeColumn row =
 
 pointsColumn row =
     case row of
-        PointsModuleRow r ->
+        FailPassPointsModuleRow r ->
             cell [] <|
                 viewPointLadder <|
                     pointLadder r.points r.four r.five r.max
 
-        PointsAssignmentRow r ->
+        PointsOnlyModuleRow r ->
+            cell [] <|
+                viewPointsOnlyLadder <|
+                    pointLadder r.points r.four r.five r.max
+
+        FailPassPointsAssignmentRow r ->
             cell [] <| higherGradePointsButtons r.moduleIndex r.assignmentIndex r.max r.points
+
+        PointsOnlyAssignmentRow r ->
+            cell [] <| pointsOnlyButtons r.moduleIndex r.assignmentIndex r.max r.points
 
         SumRow _ ->
             cell [ topBorder, Font.alignRight, Font.bold ] <| text "Sum"
@@ -1100,7 +1385,10 @@ newWeightColumn row =
         AverageModuleRow r ->
             centeredCell <| text <| String.fromInt r.credits
 
-        PointsModuleRow r ->
+        FailPassPointsModuleRow r ->
+            centeredCell <| text <| String.fromInt r.credits
+
+        PointsOnlyModuleRow r ->
             centeredCell <| text <| String.fromInt r.credits
 
         SingleGrade345ModuleRow r ->
@@ -1136,7 +1424,10 @@ weightedGradeColumn row =
                         |> Maybe.withDefault "No grade"
                     )
 
-        PointsModuleRow r ->
+        FailPassPointsModuleRow r ->
+            centeredCell <| text <| weightedGrade r.grade r.credits
+
+        PointsOnlyModuleRow r ->
             centeredCell <| text <| weightedGrade r.grade r.credits
 
         SingleGrade345ModuleRow r ->
