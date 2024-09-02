@@ -403,6 +403,21 @@ assignmentsPart1Points =
     }
 
 
+osAssignments : Module
+osAssignments =
+    { code = "0400"
+    , name = "Assignments"
+    , credits = 2
+    , assignments =
+        higherGradeAssignments 4
+            8
+            [ ( "Fundamental concepts", 3 )
+            , ( "The process concept", 3 )
+            , ( "Threads, synchronization and deadlock", 4 )
+            ]
+    }
+
+
 dspAssignments : Module
 dspAssignments =
     { code = "2010"
@@ -437,6 +452,15 @@ writtenExam : Module
 writtenExam =
     { code = "3000"
     , name = "Written exam (part 1)"
+    , credits = 1
+    , assignments = singleGrade345
+    }
+
+
+osWrittenExam : Module
+osWrittenExam =
+    { code = "0500"
+    , name = "Written exam"
     , credits = 1
     , assignments = singleGrade345
     }
@@ -519,8 +543,16 @@ osppModel =
         ]
 
 
-dspModel : Model
-dspModel =
+osModel : Model
+osModel =
+    Array.fromList
+        [ osAssignments
+        , osWrittenExam
+        ]
+
+
+dspModelOld : Model
+dspModelOld =
     Array.fromList
         [ dspWrittenExam
         , dspAssignments
@@ -529,8 +561,8 @@ dspModel =
         ]
 
 
-dspModelV2 : Model
-dspModelV2 =
+dspModel : Model
+dspModel =
     Array.fromList
         [ dspWrittenExam
         , dspAssignmentsV2
@@ -541,7 +573,7 @@ dspModelV2 =
 
 init : ( Model, Cmd Msg )
 init =
-    ( dspModelV2, Cmd.none )
+    ( osModel, Cmd.none )
 
 
 getModuleGrade345 : Module -> Maybe Grade345

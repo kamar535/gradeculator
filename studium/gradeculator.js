@@ -5185,9 +5185,8 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$element = _Browser_element;
-var $author$project$Main$PointsOnly = function (a) {
-	return {$: 'PointsOnly', a: a};
-};
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $elm$core$Array$fromListHelp = F3(
 	function (list, nodeList, nodeListSize) {
 		fromListHelp:
@@ -5223,13 +5222,16 @@ var $elm$core$Array$fromList = function (list) {
 		return A3($elm$core$Array$fromListHelp, list, _List_Nil, 0);
 	}
 };
-var $author$project$Main$pointsOnlyAssignment = F2(
+var $author$project$Main$FailPassPoints = function (a) {
+	return {$: 'FailPassPoints', a: a};
+};
+var $author$project$Main$higherGradeAssignment = F2(
 	function (name, max) {
-		return {mandatoryPass: true, max: max, name: name, points: 1};
+		return {mandatoryPass: true, max: max, name: name, points: 0};
 	});
-var $author$project$Main$pointsOnlyAssignments = F3(
+var $author$project$Main$higherGradeAssignments = F3(
 	function (four, five, assignments) {
-		return $author$project$Main$PointsOnly(
+		return $author$project$Main$FailPassPoints(
 			{
 				assignments: $elm$core$Array$fromList(
 					A2(
@@ -5237,16 +5239,16 @@ var $author$project$Main$pointsOnlyAssignments = F3(
 						function (_v0) {
 							var name = _v0.a;
 							var max = _v0.b;
-							return A2($author$project$Main$pointsOnlyAssignment, name, max);
+							return A2($author$project$Main$higherGradeAssignment, name, max);
 						},
 						assignments)),
 				five: five,
 				four: four
 			});
 	});
-var $author$project$Main$dspAssignmentsV2 = {
+var $author$project$Main$osAssignments = {
 	assignments: A3(
-		$author$project$Main$pointsOnlyAssignments,
+		$author$project$Main$higherGradeAssignments,
 		4,
 		8,
 		_List_fromArray(
@@ -5255,8 +5257,8 @@ var $author$project$Main$dspAssignmentsV2 = {
 				_Utils_Tuple2('The process concept', 3),
 				_Utils_Tuple2('Threads, synchronization and deadlock', 4)
 			])),
-	code: '2010',
-	credits: 5,
+	code: '0400',
+	credits: 2,
 	name: 'Assignments'
 };
 var $author$project$Main$SingleGrade345 = function (a) {
@@ -5265,15 +5267,11 @@ var $author$project$Main$SingleGrade345 = function (a) {
 var $author$project$Main$Three = {$: 'Three'};
 var $author$project$Main$singleGrade345 = $author$project$Main$SingleGrade345(
 	$elm$core$Maybe$Just($author$project$Main$Three));
-var $author$project$Main$dspProjectGroup = {assignments: $author$project$Main$singleGrade345, code: '3020', credits: 2, name: 'Project (group)'};
-var $author$project$Main$dspProjectIndividual = {assignments: $author$project$Main$singleGrade345, code: '3010', credits: 5, name: 'Project (individual)'};
-var $author$project$Main$dspWrittenExam = {assignments: $author$project$Main$singleGrade345, code: '1010', credits: 2, name: 'Written exam'};
-var $author$project$Main$dspModelV2 = $elm$core$Array$fromList(
+var $author$project$Main$osWrittenExam = {assignments: $author$project$Main$singleGrade345, code: '0500', credits: 1, name: 'Written exam'};
+var $author$project$Main$osModel = $elm$core$Array$fromList(
 	_List_fromArray(
-		[$author$project$Main$dspWrittenExam, $author$project$Main$dspAssignmentsV2, $author$project$Main$dspProjectIndividual, $author$project$Main$dspProjectGroup]));
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
-var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $author$project$Main$init = _Utils_Tuple2($author$project$Main$dspModelV2, $elm$core$Platform$Cmd$none);
+		[$author$project$Main$osAssignments, $author$project$Main$osWrittenExam]));
+var $author$project$Main$init = _Utils_Tuple2($author$project$Main$osModel, $elm$core$Platform$Cmd$none);
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
 var $elm$core$Bitwise$and = _Bitwise_and;
@@ -5403,8 +5401,8 @@ var $author$project$Main$updateAssignmentGrade = F3(
 			return m;
 		}
 	});
-var $author$project$Main$FailPassPoints = function (a) {
-	return {$: 'FailPassPoints', a: a};
+var $author$project$Main$PointsOnly = function (a) {
+	return {$: 'PointsOnly', a: a};
 };
 var $author$project$Main$updateHigherGradePoints = F3(
 	function (assignmentIndex, points, m) {
