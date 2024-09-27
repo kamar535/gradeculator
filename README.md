@@ -8,7 +8,7 @@ is calculated as a weighed average of a set of the grades for the Ladok modules
 of the course. The calculator can for example be added to a page in
 Studium/Canvas to makes it easy for students to understand how each of the Ladok
 module grades affects the final grade. The calculator also makes it easy to see
-how an indivdual assignment grade affects the final grade. 
+how an individual assignment grade affects the final grade. 
 
 # Example
 
@@ -38,7 +38,7 @@ calculated as shown in the below example.
 
 # Demo
 
-Check out this [demo][demo] of the GradeCulator confiugred for the OSPP (1DT096) course.  
+Check out this [demo][demo] of the GradeCulator configured for the OSPP (1DT096) course.  
 
 [demo]: https://htmlpreview.github.io/?https://github.com/kamar535/gradeculator/blob/master/demo/gradeculator.html
 # Implemented in Elm
@@ -135,7 +135,7 @@ elm make src/Main.elm --output=studium/gradeculator.js
 
 Upload `studium/gradeculator.html` and `studium/gradeculator.js` to the files area in Studium.
 
-## Embed the GradeCulator on a Studium/Canas page
+## Embed the GradeCulator on a Studium/Canvas page
 
 This solution is based on https://canvas.ou.edu/courses/56095
 

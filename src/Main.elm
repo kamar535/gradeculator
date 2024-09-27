@@ -11,6 +11,7 @@ import Element.Input as Input
 import Html exposing (Html, a)
 import Maybe.Extra
 import Round
+import String
 import Tuple.Extra
 
 
@@ -23,7 +24,8 @@ type alias Model =
 
 
 type alias Module =
-    { code : String
+    { symbol : String
+    , code : String
     , name : String
     , credits : Int
     , assignments : Assignments
@@ -376,7 +378,8 @@ finalGrade modules =
 
 assignmentsPart1Average : Module
 assignmentsPart1Average =
-    { code = "2000"
+    { symbol = "A_1"
+    , code = "2000"
     , name = "Assignments (part 1, average)"
     , credits = 2
     , assignments =
@@ -390,7 +393,8 @@ assignmentsPart1Average =
 
 assignmentsPart1Points : Module
 assignmentsPart1Points =
-    { code = "2000"
+    { symbol = "A_1"
+    , code = "2000"
     , name = "Assignments (part 1)"
     , credits = 2
     , assignments =
@@ -405,7 +409,8 @@ assignmentsPart1Points =
 
 osAssignments : Module
 osAssignments =
-    { code = "0400"
+    { symbol = "A"
+    , code = "0400"
     , name = "Assignments"
     , credits = 2
     , assignments =
@@ -420,7 +425,8 @@ osAssignments =
 
 dspAssignments : Module
 dspAssignments =
-    { code = "2010"
+    { symbol = "A"
+    , code = "2010"
     , name = "Assignments"
     , credits = 5
     , assignments =
@@ -435,7 +441,8 @@ dspAssignments =
 
 dspAssignmentsV2 : Module
 dspAssignmentsV2 =
-    { code = "2010"
+    { symbol = "A"
+    , code = "2010"
     , name = "Assignments"
     , credits = 5
     , assignments =
@@ -450,7 +457,8 @@ dspAssignmentsV2 =
 
 writtenExam : Module
 writtenExam =
-    { code = "3000"
+    { symbol = "E"
+    , code = "3000"
     , name = "Written exam (part 1)"
     , credits = 1
     , assignments = singleGrade345
@@ -459,7 +467,8 @@ writtenExam =
 
 osWrittenExam : Module
 osWrittenExam =
-    { code = "0500"
+    { symbol = "E"
+    , code = "0500"
     , name = "Written exam"
     , credits = 1
     , assignments = singleGrade345
@@ -468,7 +477,8 @@ osWrittenExam =
 
 dspWrittenExam : Module
 dspWrittenExam =
-    { code = "1010"
+    { symbol = "T"
+    , code = "1010"
     , name = "Written exam"
     , credits = 2
     , assignments = singleGrade345
@@ -477,7 +487,8 @@ dspWrittenExam =
 
 assignmentsPart2 : Module
 assignmentsPart2 =
-    { code = "5000"
+    { symbol = "A_2"
+    , code = "5000"
     , name = "Assignments (part 2)"
     , credits = 1
     , assignments = singleGrade345
@@ -486,7 +497,8 @@ assignmentsPart2 =
 
 projectGroup : Module
 projectGroup =
-    { code = "6000"
+    { symbol = "P_g"
+    , code = "6000"
     , name = "Project (group)"
     , credits = 2
     , assignments = singleGrade345
@@ -495,7 +507,8 @@ projectGroup =
 
 dspProjectGroup : Module
 dspProjectGroup =
-    { code = "3020"
+    { symbol = "P_g"
+    , code = "3020"
     , name = "Project (group)"
     , credits = 2
     , assignments = singleGrade345
@@ -504,7 +517,8 @@ dspProjectGroup =
 
 projectIndividual : Module
 projectIndividual =
-    { code = "7000"
+    { symbol = "P_i"
+    , code = "7000"
     , name = "Project (individual)"
     , credits = 5
     , assignments = singleGrade345
@@ -513,7 +527,8 @@ projectIndividual =
 
 dspProjectIndividual : Module
 dspProjectIndividual =
-    { code = "3010"
+    { symbol = "P_i"
+    , code = "3010"
     , name = "Project (individual)"
     , credits = 5
     , assignments = singleGrade345
@@ -573,7 +588,7 @@ dspModel =
 
 init : ( Model, Cmd Msg )
 init =
-    ( osModel, Cmd.none )
+    ( dspModel, Cmd.none )
 
 
 getModuleGrade345 : Module -> Maybe Grade345
@@ -1127,7 +1142,8 @@ pointsOnlyButtons moduleIndex assignmentIndex points selected =
 
 type TableRow
     = AverageModuleRow
-        { code : String
+        { symbol : String
+        , code : String
         , name : String
         , grade : Maybe { grade : Grade345, average : Float }
         , credits : Int
@@ -1139,7 +1155,8 @@ type TableRow
         , grade : Maybe Grade345
         }
     | FailPassPointsModuleRow
-        { code : String
+        { symbol : String
+        , code : String
         , name : String
         , grade : Maybe Grade345
         , points : Int
@@ -1149,7 +1166,8 @@ type TableRow
         , credits : Int
         }
     | PointsOnlyModuleRow
-        { code : String
+        { symbol : String
+        , code : String
         , name : String
         , grade : Maybe Grade345
         , points : Int
@@ -1176,7 +1194,8 @@ type TableRow
         , max : Int
         }
     | SingleGrade345ModuleRow
-        { code : String
+        { symbol : String
+        , code : String
         , name : String
         , moduleIndex : Int
         , grade : Maybe Grade345
@@ -1192,14 +1211,14 @@ moduleTableRows : Int -> Module -> List TableRow
 moduleTableRows moduleIndex m =
     case m.assignments of
         SingleGrade345 grade ->
-            [ SingleGrade345ModuleRow { code = m.code, moduleIndex = moduleIndex, name = m.name, grade = grade, credits = m.credits } ]
+            [ SingleGrade345ModuleRow { symbol = m.symbol, code = m.code, moduleIndex = moduleIndex, name = m.name, grade = grade, credits = m.credits } ]
 
         AverageGrade345 assignments ->
             let
                 grade =
                     averageGradeHelper assignments
             in
-            AverageModuleRow { code = m.code, name = m.name, grade = grade, credits = m.credits }
+            AverageModuleRow { symbol = m.symbol, code = m.code, name = m.name, grade = grade, credits = m.credits }
                 :: (assignments
                         |> Array.toList
                         |> List.indexedMap
@@ -1213,7 +1232,7 @@ moduleTableRows moduleIndex m =
                 grade =
                     pointsGradeHelper assignments
             in
-            FailPassPointsModuleRow { code = m.code, name = m.name, grade = grade.grade, points = grade.points, four = assignments.four, five = assignments.five, max = grade.max, credits = m.credits }
+            FailPassPointsModuleRow { symbol = m.symbol, code = m.code, name = m.name, grade = grade.grade, points = grade.points, four = assignments.four, five = assignments.five, max = grade.max, credits = m.credits }
                 :: (assignments.assignments
                         |> Array.toList
                         |> List.indexedMap
@@ -1231,7 +1250,8 @@ moduleTableRows moduleIndex m =
                     numberOfAssignments m
             in
             PointsOnlyModuleRow
-                { code = m.code
+                { symbol = m.symbol
+                , code = m.code
                 , name = m.name
                 , grade = grade.grade
                 , points = grade.points
@@ -1268,7 +1288,8 @@ modelToTableRows model =
 exampleTableRows : List TableRow
 exampleTableRows =
     [ AverageModuleRow
-        { code = "2000"
+        { symbol = "A_1"
+        , code = "2000"
         , name = "Assignments (part 1)"
         , grade = Just { grade = Four, average = 4.56 }
         , credits = 2
@@ -1280,7 +1301,8 @@ exampleTableRows =
         , grade = Just Four
         }
     , FailPassPointsModuleRow
-        { code = "2000"
+        { symbol = "A_1"
+        , code = "2000"
         , name = "Assignments (part 1)"
         , grade = Just Three
         , points = 7
@@ -1298,13 +1320,50 @@ exampleTableRows =
         , max = 4
         }
     , SingleGrade345ModuleRow
-        { code = "3000"
+        { symbol = "E"
+        , code = "3000"
         , name = "Written exam (part 1)"
         , moduleIndex = 2
         , grade = Just Five
         , credits = 1
         }
     ]
+
+
+viewSymbol : String -> Element Msg
+viewSymbol symbol =
+    case String.split "_" symbol of
+        [ s, suffix ] ->
+            Html.span []
+                [ Html.text s, Html.sub [] [ Html.text suffix ] ]
+                |> html
+
+        [ s ] ->
+            text s
+
+        _ ->
+            none
+
+
+symbolColumn row =
+    case row of
+        AverageModuleRow r ->
+            cell [ Font.center ] <| viewSymbol r.symbol
+
+        FailPassPointsModuleRow r ->
+            cell [ Font.center ] <| viewSymbol r.symbol
+
+        PointsOnlyModuleRow r ->
+            cell [ Font.center ] <| viewSymbol r.symbol
+
+        SingleGrade345ModuleRow r ->
+            cell [ Font.center ] <| viewSymbol r.symbol
+
+        SumRow _ ->
+            cell [ topBorder ] none
+
+        _ ->
+            none
 
 
 codeColumn row =
@@ -1480,7 +1539,11 @@ viewTableRows rows =
     table [ width (px 800) ]
         { data = rows
         , columns =
-            [ { header = header "Code"
+            [ { header = header "Symbol"
+              , width = fill
+              , view = symbolColumn
+              }
+            , { header = header "Code"
               , width = px 70
               , view = codeColumn
               }
@@ -1500,7 +1563,7 @@ viewTableRows rows =
               , width = px 100
               , view = newWeightColumn
               }
-            , { header = centeredHeader "Weigted\ngrade"
+            , { header = centeredHeader "Weighted\ngrade"
               , width = px 100
               , view = weightedGradeColumn
               }

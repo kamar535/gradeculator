@@ -5185,8 +5185,9 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$element = _Browser_element;
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
-var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $author$project$Main$PointsOnly = function (a) {
+	return {$: 'PointsOnly', a: a};
+};
 var $elm$core$Array$fromListHelp = F3(
 	function (list, nodeList, nodeListSize) {
 		fromListHelp:
@@ -5222,16 +5223,13 @@ var $elm$core$Array$fromList = function (list) {
 		return A3($elm$core$Array$fromListHelp, list, _List_Nil, 0);
 	}
 };
-var $author$project$Main$FailPassPoints = function (a) {
-	return {$: 'FailPassPoints', a: a};
-};
-var $author$project$Main$higherGradeAssignment = F2(
+var $author$project$Main$pointsOnlyAssignment = F2(
 	function (name, max) {
-		return {mandatoryPass: true, max: max, name: name, points: 0};
+		return {mandatoryPass: true, max: max, name: name, points: 1};
 	});
-var $author$project$Main$higherGradeAssignments = F3(
+var $author$project$Main$pointsOnlyAssignments = F3(
 	function (four, five, assignments) {
-		return $author$project$Main$FailPassPoints(
+		return $author$project$Main$PointsOnly(
 			{
 				assignments: $elm$core$Array$fromList(
 					A2(
@@ -5239,16 +5237,16 @@ var $author$project$Main$higherGradeAssignments = F3(
 						function (_v0) {
 							var name = _v0.a;
 							var max = _v0.b;
-							return A2($author$project$Main$higherGradeAssignment, name, max);
+							return A2($author$project$Main$pointsOnlyAssignment, name, max);
 						},
 						assignments)),
 				five: five,
 				four: four
 			});
 	});
-var $author$project$Main$osAssignments = {
+var $author$project$Main$dspAssignmentsV2 = {
 	assignments: A3(
-		$author$project$Main$higherGradeAssignments,
+		$author$project$Main$pointsOnlyAssignments,
 		4,
 		8,
 		_List_fromArray(
@@ -5257,9 +5255,10 @@ var $author$project$Main$osAssignments = {
 				_Utils_Tuple2('The process concept', 3),
 				_Utils_Tuple2('Threads, synchronization and deadlock', 4)
 			])),
-	code: '0400',
-	credits: 2,
-	name: 'Assignments'
+	code: '2010',
+	credits: 5,
+	name: 'Assignments',
+	symbol: 'A'
 };
 var $author$project$Main$SingleGrade345 = function (a) {
 	return {$: 'SingleGrade345', a: a};
@@ -5267,11 +5266,15 @@ var $author$project$Main$SingleGrade345 = function (a) {
 var $author$project$Main$Three = {$: 'Three'};
 var $author$project$Main$singleGrade345 = $author$project$Main$SingleGrade345(
 	$elm$core$Maybe$Just($author$project$Main$Three));
-var $author$project$Main$osWrittenExam = {assignments: $author$project$Main$singleGrade345, code: '0500', credits: 1, name: 'Written exam'};
-var $author$project$Main$osModel = $elm$core$Array$fromList(
+var $author$project$Main$dspProjectGroup = {assignments: $author$project$Main$singleGrade345, code: '3020', credits: 2, name: 'Project (group)', symbol: 'P_g'};
+var $author$project$Main$dspProjectIndividual = {assignments: $author$project$Main$singleGrade345, code: '3010', credits: 5, name: 'Project (individual)', symbol: 'P_i'};
+var $author$project$Main$dspWrittenExam = {assignments: $author$project$Main$singleGrade345, code: '1010', credits: 2, name: 'Written exam', symbol: 'T'};
+var $author$project$Main$dspModel = $elm$core$Array$fromList(
 	_List_fromArray(
-		[$author$project$Main$osAssignments, $author$project$Main$osWrittenExam]));
-var $author$project$Main$init = _Utils_Tuple2($author$project$Main$osModel, $elm$core$Platform$Cmd$none);
+		[$author$project$Main$dspWrittenExam, $author$project$Main$dspAssignmentsV2, $author$project$Main$dspProjectIndividual, $author$project$Main$dspProjectGroup]));
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $author$project$Main$init = _Utils_Tuple2($author$project$Main$dspModel, $elm$core$Platform$Cmd$none);
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
 var $elm$core$Bitwise$and = _Bitwise_and;
@@ -5401,8 +5404,8 @@ var $author$project$Main$updateAssignmentGrade = F3(
 			return m;
 		}
 	});
-var $author$project$Main$PointsOnly = function (a) {
-	return {$: 'PointsOnly', a: a};
+var $author$project$Main$FailPassPoints = function (a) {
+	return {$: 'FailPassPoints', a: a};
 };
 var $author$project$Main$updateHigherGradePoints = F3(
 	function (assignmentIndex, points, m) {
@@ -12271,7 +12274,7 @@ var $author$project$Main$moduleTableRows = F2(
 				return _List_fromArray(
 					[
 						$author$project$Main$SingleGrade345ModuleRow(
-						{code: m.code, credits: m.credits, grade: grade, moduleIndex: moduleIndex, name: m.name})
+						{code: m.code, credits: m.credits, grade: grade, moduleIndex: moduleIndex, name: m.name, symbol: m.symbol})
 					]);
 			case 'AverageGrade345':
 				var assignments = _v0.a;
@@ -12279,7 +12282,7 @@ var $author$project$Main$moduleTableRows = F2(
 				return A2(
 					$elm$core$List$cons,
 					$author$project$Main$AverageModuleRow(
-						{code: m.code, credits: m.credits, grade: grade, name: m.name}),
+						{code: m.code, credits: m.credits, grade: grade, name: m.name, symbol: m.symbol}),
 					A2(
 						$elm$core$List$indexedMap,
 						F2(
@@ -12294,7 +12297,7 @@ var $author$project$Main$moduleTableRows = F2(
 				return A2(
 					$elm$core$List$cons,
 					$author$project$Main$FailPassPointsModuleRow(
-						{code: m.code, credits: m.credits, five: assignments.five, four: assignments.four, grade: grade.grade, max: grade.max, name: m.name, points: grade.points}),
+						{code: m.code, credits: m.credits, five: assignments.five, four: assignments.four, grade: grade.grade, max: grade.max, name: m.name, points: grade.points, symbol: m.symbol}),
 					A2(
 						$elm$core$List$indexedMap,
 						F2(
@@ -12310,7 +12313,7 @@ var $author$project$Main$moduleTableRows = F2(
 				return A2(
 					$elm$core$List$cons,
 					$author$project$Main$PointsOnlyModuleRow(
-						{code: m.code, credits: m.credits, five: assignments.five + n, four: assignments.four + n, grade: grade.grade, max: grade.max + n, name: m.name, numberOfAssignments: n, points: grade.points}),
+						{code: m.code, credits: m.credits, five: assignments.five + n, four: assignments.four + n, grade: grade.grade, max: grade.max + n, name: m.name, numberOfAssignments: n, points: grade.points, symbol: m.symbol}),
 					A2(
 						$elm$core$List$indexedMap,
 						F2(
@@ -13805,6 +13808,88 @@ var $author$project$Main$pointsColumn = function (row) {
 			return $mdgriffith$elm_ui$Element$none;
 	}
 };
+var $mdgriffith$elm_ui$Internal$Model$unstyled = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Unstyled, $elm$core$Basics$always);
+var $mdgriffith$elm_ui$Element$html = $mdgriffith$elm_ui$Internal$Model$unstyled;
+var $elm$html$Html$span = _VirtualDom_node('span');
+var $elm$html$Html$sub = _VirtualDom_node('sub');
+var $author$project$Main$viewSymbol = function (symbol) {
+	var _v0 = A2($elm$core$String$split, '_', symbol);
+	_v0$2:
+	while (true) {
+		if (_v0.b) {
+			if (_v0.b.b) {
+				if (!_v0.b.b.b) {
+					var s = _v0.a;
+					var _v1 = _v0.b;
+					var suffix = _v1.a;
+					return $mdgriffith$elm_ui$Element$html(
+						A2(
+							$elm$html$Html$span,
+							_List_Nil,
+							_List_fromArray(
+								[
+									$elm$html$Html$text(s),
+									A2(
+									$elm$html$Html$sub,
+									_List_Nil,
+									_List_fromArray(
+										[
+											$elm$html$Html$text(suffix)
+										]))
+								])));
+				} else {
+					break _v0$2;
+				}
+			} else {
+				var s = _v0.a;
+				return $mdgriffith$elm_ui$Element$text(s);
+			}
+		} else {
+			break _v0$2;
+		}
+	}
+	return $mdgriffith$elm_ui$Element$none;
+};
+var $author$project$Main$symbolColumn = function (row) {
+	switch (row.$) {
+		case 'AverageModuleRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_fromArray(
+					[$mdgriffith$elm_ui$Element$Font$center]),
+				$author$project$Main$viewSymbol(r.symbol));
+		case 'FailPassPointsModuleRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_fromArray(
+					[$mdgriffith$elm_ui$Element$Font$center]),
+				$author$project$Main$viewSymbol(r.symbol));
+		case 'PointsOnlyModuleRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_fromArray(
+					[$mdgriffith$elm_ui$Element$Font$center]),
+				$author$project$Main$viewSymbol(r.symbol));
+		case 'SingleGrade345ModuleRow':
+			var r = row.a;
+			return A2(
+				$author$project$Main$cell,
+				_List_fromArray(
+					[$mdgriffith$elm_ui$Element$Font$center]),
+				$author$project$Main$viewSymbol(r.symbol));
+		case 'SumRow':
+			return A2(
+				$author$project$Main$cell,
+				_List_fromArray(
+					[$author$project$Main$topBorder]),
+				$mdgriffith$elm_ui$Element$none);
+		default:
+			return $mdgriffith$elm_ui$Element$none;
+	}
+};
 var $mdgriffith$elm_ui$Element$InternalColumn = function (a) {
 	return {$: 'InternalColumn', a: a};
 };
@@ -14104,6 +14189,11 @@ var $author$project$Main$viewTableRows = function (rows) {
 			columns: _List_fromArray(
 				[
 					{
+					header: $author$project$Main$header('Symbol'),
+					view: $author$project$Main$symbolColumn,
+					width: $mdgriffith$elm_ui$Element$fill
+				},
+					{
 					header: $author$project$Main$header('Code'),
 					view: $author$project$Main$codeColumn,
 					width: $mdgriffith$elm_ui$Element$px(70)
@@ -14129,7 +14219,7 @@ var $author$project$Main$viewTableRows = function (rows) {
 					width: $mdgriffith$elm_ui$Element$px(100)
 				},
 					{
-					header: $author$project$Main$centeredHeader('Weigted\ngrade'),
+					header: $author$project$Main$centeredHeader('Weighted\ngrade'),
 					view: $author$project$Main$weightedGradeColumn,
 					width: $mdgriffith$elm_ui$Element$px(100)
 				}
