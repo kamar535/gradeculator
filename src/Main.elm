@@ -588,7 +588,7 @@ dspModel =
 
 init : ( Model, Cmd Msg )
 init =
-    ( dspModel, Cmd.none )
+    ( osppModel, Cmd.none )
 
 
 getModuleGrade345 : Module -> Maybe Grade345
